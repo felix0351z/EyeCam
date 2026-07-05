@@ -9,32 +9,62 @@ from src.settings import EyeCamSettings
 
 class YOLOModel(abc.ABC):
 
-
     MODEL_SIZE = (640, 640)
-    # Width and length of the video input
-    # This is the default image size used by the YOLO models
-    # https://docs.ultralytics.com/tasks/detect#train
+    """
+    This is the default image size used by the yolo models.
+    https://docs.ultralytics.com/tasks/detect#train
+    """
 
     @property
     @abc.abstractmethod
     def model_path(self) -> str:
+        """
+        Path to the .onnx file
+        """
+
         pass
 
     @property
     @abc.abstractmethod
     def nms(self) -> bool:
+        """
+        Apply a Non-Maximum-Suppression in the post-process.
+        This step is unnecessary if a model already has built-im NMS.
+        """
+
         pass
 
     @property
     @abc.abstractmethod
     def central_coordinates(self) -> bool:
+        """
+        Is the output of the model in the format [center x, center y, width, height] or
+        are 2 points given like [x1, y1, x2, y2]
+        """
+
         pass
 
     @abc.abstractmethod
     def map_result(self, result: np.ndarray) -> list[list[Any]]:
+        """
+        Map the result of the yolo model to a list in the format [class_ids, confidences, boxes]
+        Every detection is one sequence, so class_ids[i] and confidences[i] are related to each other.
+        class_ids: list[int]
+        confidences: list[float]
+        boxes: list[[x, y, width, height] or [x1, x2, y1, y2]]
+
+        :param result: The output-layer of the model
+        :return: [class_ids, confidences, boxes]
+        """
+
         pass
 
     def __init__(self, settings: EyeCamSettings):
+        """
+        Load the model and initialize the variables
+        :param settings: The EyeCamSettings from settings.py
+        """
+
         self.settings = settings
 
         # Load the onnx model
@@ -42,14 +72,20 @@ class YOLOModel(abc.ABC):
         self.model: cv.dnn.Net = cv.dnn.readNet(self.model_path)
 
     def process(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Process the frame with the model
+        :param frame: The image frame captured by opencv
+        :return: The model result in the format [class_ids, confidences, boxes]
+        """
+
         # Create a blob from the frame
         # https://www.geeksforgeeks.org/python/how-opencvs-blobfromimage-works/
         blob = cv.dnn.blobFromImage(
             image=frame,
-            scalefactor=1 / 255,    # Multiply the pixel values by a scale factor to normalize them
-            size=self.MODEL_SIZE,   # Scale to match the required size by the network
-            mean=[0, 0, 0],         # Remove color bias by subtracting this color values.
-            swapRB=True,            # Convert OpenCV’s BGR format to RGB
+            scalefactor=1 / 255,  # Multiply the pixel values by a scale factor to normalize them
+            size=self.MODEL_SIZE,  # Scale to match the required size by the network
+            mean=[0, 0, 0],  # Remove color bias by subtracting this color values.
+            swapRB=True,  # Convert OpenCV’s BGR format to RGB
             crop=False
         )
 
@@ -98,6 +134,7 @@ class YOLOv8Model(YOLOModel):
 
         return [class_ids, confidences, boxes]
 
+
 class YOLOv5Model(YOLOModel):
 
     @property
@@ -140,6 +177,7 @@ class YOLOv5Model(YOLOModel):
 
         return [class_ids, confidences, boxes]
 
+
 class YOLOv26Model(YOLOModel):
 
     @property
@@ -148,10 +186,18 @@ class YOLOv26Model(YOLOModel):
 
     @property
     def central_coordinates(self) -> bool:
+        """
+        YOLOv26 returns two points. No central point with width and height.
+        https://docs.ultralytics.com/guides/end2end-detection#how-end-to-end-detection-works
+        """
         return False
 
     @property
     def nms(self) -> bool:
+        """
+        No need for NMS because YOLOv26 already has built-in.
+        https://docs.ultralytics.com/guides/end2end-detection#how-end-to-end-detection-works
+        """
         return False
 
     def map_result(self, result: np.ndarray) -> list[list[Any]]:

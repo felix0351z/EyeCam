@@ -10,6 +10,10 @@ from src.yolo import YOLOv8Model, YOLOv5Model, YOLOv26Model
 class EyeCam:
 
     def __init__(self):
+        """
+        Initialize the main program
+        """
+
         self.settings = EyeCamSettings()
         self.model = YOLOv26Model(self.settings)
         self.drawer = Drawer(self.settings, self.model.MODEL_SIZE)
@@ -19,6 +23,9 @@ class EyeCam:
         self.fps = 0
 
     def run(self):
+        """
+        Run the main program
+        """
         time_start = time.time()
 
         while True:

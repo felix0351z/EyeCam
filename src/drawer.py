@@ -15,8 +15,9 @@ class Drawer:
 
     def __init__(self, settings: EyeCamSettings, model_size: tuple[int, int]):
         """
-
-        :param model_size: 0: width, 1: height
+        Initialize the drawer
+        :param settings: The EyeCamSettings defined in settings.py
+        :param model_size: The image size used by the cnn model
         """
 
         self.settings = settings
@@ -26,7 +27,20 @@ class Drawer:
         with open(self.settings.COCO_FILE_PATH, 'r') as file:
             self.coco_classes = file.read().rstrip('\n').split('\n')
 
-    def scale_boxes(self, image_shape: tuple[int], boxes: np.ndarray, central_coordinates: bool) -> list[np.ndarray]:
+    def resize_boxes(self, image_shape: tuple[int], boxes: np.ndarray, central_coordinates: bool) -> list[np.ndarray]:
+        """
+        Resize the boxed to the width and height of the actual image.
+        This is necessary because the cnn model uses a fixed image size.
+        The input frame has a different size, the model will resize it.
+        Therefore, the returned box-coordinates also need to be resized.
+
+        :param image_shape: The acutal size of the captured frame
+        :param boxes: The boxes returned by the cnn model
+        :param central_coordinates: Is the model using a central coordinate with width and height or two coordinates
+        :return: The resized boxes
+        """
+
+
         output_boxes = []
 
         image_height, image_width = image_shape[:2]
@@ -58,10 +72,10 @@ class Drawer:
     def draw(self, frame: np.ndarray, net_output: np.ndarray, nms: bool = True, central_coordinates: bool = True) -> np.ndarray:
         """
         Draw bounding boxes around the detected objects.
-        :param frame: The input frame or image
-        :param net_output: The output of the cnn model
-        :param nms: Apply a Non-Maximum-Suppression. Needed in older cnn models
-        :param central_coordinates: df
+        :param frame: The input frame
+        :param net_output: The result of the cnn model
+        :param nms: Apply a Non-Maximum-Suppression
+        :param central_coordinates: Is the model using a central coordinate with width and height or two coordinates
         :return The input frame with the drawn boxes on it
         """
 
@@ -69,7 +83,7 @@ class Drawer:
         class_ids, confidences, boxes = net_output
 
         # Scale the boxes to the actual frame size
-        scaled_boxes = self.scale_boxes(frame.shape, boxes, central_coordinates)
+        scaled_boxes = self.resize_boxes(frame.shape, boxes, central_coordinates)
 
         # Perform a Non-Maximum-Suppression
         indices = range(len(scaled_boxes))
@@ -106,6 +120,9 @@ class Drawer:
 
 
 def draw_label(frame: np.ndarray, label: str, x: int, y: int):
+    """
+    Draw a single label on the frame.
+    """
 
     # Calculate the size for the label box
     # baseline: y-coordinate relative to the bottom's lowest text point
