@@ -3,14 +3,20 @@ import time
 
 import cv2 as cv
 
-from src.config import FPS_AVG_MEASURE_TIME
+from src.settings import EyeCamSettings
+from src.drawer import Drawer, draw_label
+from src.yolo import YOLOv8Model, YOLOv5Model, YOLOv26Model
 
-
-class EyeCamCamera:
+class EyeCam:
 
     def __init__(self):
+        self.settings = EyeCamSettings()
+        self.model = YOLOv26Model(self.settings)
+        self.drawer = Drawer(self.settings, self.model.MODEL_SIZE)
+
         self.cam = cv.VideoCapture(0)
         self.fps_counter = 0
+        self.fps = 0
 
     def run(self):
         time_start = time.time()
@@ -24,10 +30,17 @@ class EyeCamCamera:
             # Calculate the current FPS
             # This is an average measurement over 10 frames
             self.fps_counter += 1
-            if self.fps_counter % FPS_AVG_MEASURE_TIME == 0:
+            if self.fps_counter % self.settings.FPS_AVG_MEASURE_TIME == 0:
                 time_end = time.time()
-                fps = FPS_AVG_MEASURE_TIME / (time_end - time_start)
+                self.fps = self.settings.FPS_AVG_MEASURE_TIME / (time_end - time_start)
                 time_start = time.time()
+
+            # Draw
+            draw_label(frame, f"FPS: {self.fps}", x=10, y=10)
+
+            result = self.model.process(frame)
+            frame = self.drawer.draw(frame, result, self.model.nms, self.model.central_coordinates)
+            cv.imshow("Eye Cam", frame)
 
             # End the loop if the key 'Q' was pressed
             if cv.waitKey(1) == ord('q'):
@@ -41,4 +54,4 @@ class EyeCamCamera:
 
 # Entrypoint of the application.
 while __name__ == "__main__":
-    EyeCamCamera()
+    EyeCam().run()
