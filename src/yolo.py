@@ -24,35 +24,16 @@ class YOLOModel(abc.ABC):
 
         pass
 
-    @property
     @abc.abstractmethod
-    def nms(self) -> bool:
-        """
-        Apply a Non-Maximum-Suppression in the post-process.
-        This step is unnecessary if a model already has built-im NMS.
-        """
-
-        pass
-
-    @property
-    @abc.abstractmethod
-    def central_coordinates(self) -> bool:
-        """
-        Is the output of the model in the format [center x, center y, width, height] or
-        are 2 points given like [x1, y1, x2, y2]
-        """
-
-        pass
-
-    @abc.abstractmethod
-    def map_result(self, result: np.ndarray) -> list[list[Any]]:
+    def map_result(self, frame: np.ndarray, result: np.ndarray) -> list[list[Any]]:
         """
         Map the result of the yolo model to a list in the format [class_ids, confidences, boxes]
         Every detection is one sequence, so class_ids[i] and confidences[i] are related to each other.
         class_ids: list[int]
         confidences: list[float]
-        boxes: list[[x, y, width, height] or [x1, x2, y1, y2]]
+        boxes: list[(x1, y2), (x2, y2)]
 
+        :param frame: The image frame
         :param result: The output-layer of the model
         :return: [class_ids, confidences, boxes]
         """
@@ -71,7 +52,7 @@ class YOLOModel(abc.ABC):
         # TODO: Change to a more performaent engine another time
         self.model: cv.dnn.Net = cv.dnn.readNet(self.model_path)
 
-    def process(self, frame: np.ndarray) -> np.ndarray:
+    def process(self, frame: np.ndarray) -> list[Any]:
         """
         Process the frame with the model
         :param frame: The image frame captured by opencv
@@ -92,22 +73,15 @@ class YOLOModel(abc.ABC):
         # Proceed with the model
         self.model.setInput(blob)
         result = self.model.forward(self.model.getUnconnectedOutLayersNames())
-        return self.map_result(result)
+        return self.map_result(frame, result)
 
 
+# TODO: Implement resizing in the model
 class YOLOv8Model(YOLOModel):
 
     @property
     def model_path(self) -> str:
         return self.settings.PROJECT_PATH + "/models/yolov8n.onnx"
-
-    @property
-    def central_coordinates(self) -> bool:
-        return True
-
-    @property
-    def nms(self) -> bool:
-        return True
 
     def map_result(self, result: np.ndarray) -> list[list[Any]]:
         class_ids = []
@@ -135,19 +109,12 @@ class YOLOv8Model(YOLOModel):
         return [class_ids, confidences, boxes]
 
 
+# TODO: Implement resizing in the model
 class YOLOv5Model(YOLOModel):
 
     @property
     def model_path(self) -> str:
         return self.settings.PROJECT_PATH + "/models/yolov5s.onnx"
-
-    @property
-    def central_coordinates(self) -> bool:
-        return True
-
-    @property
-    def nms(self) -> bool:
-        return True
 
     def map_result(self, result: np.ndarray) -> list[list[Any]]:
         class_ids = []
@@ -184,23 +151,7 @@ class YOLOv26Model(YOLOModel):
     def model_path(self) -> str:
         return self.settings.PROJECT_PATH + "/models/yolo26n.onnx"
 
-    @property
-    def central_coordinates(self) -> bool:
-        """
-        YOLOv26 returns two points. No central point with width and height.
-        https://docs.ultralytics.com/guides/end2end-detection#how-end-to-end-detection-works
-        """
-        return False
-
-    @property
-    def nms(self) -> bool:
-        """
-        No need for NMS because YOLOv26 already has built-in.
-        https://docs.ultralytics.com/guides/end2end-detection#how-end-to-end-detection-works
-        """
-        return False
-
-    def map_result(self, result: np.ndarray) -> list[list[Any]]:
+    def map_result(self, frame: np.ndarray, result: np.ndarray) -> list[Any]:
         class_ids = []
         confidences = []
         boxes = []
@@ -213,6 +164,7 @@ class YOLOv26Model(YOLOModel):
             # [x1, y1, x2, y2, confidence, class_id]
             # v26 uses 2 coordinates instead of the center coordinates like the older models.
             # In addition, the model automatically returns the class id with the highest confidence.
+            # https://docs.ultralytics.com/guides/end2end-detection#how-end-to-end-detection-works
             confidence = detection[4]
 
             # Check if the confidence is high enough
@@ -221,4 +173,31 @@ class YOLOv26Model(YOLOModel):
                 class_ids.append(detection[5])
                 boxes.append(detection[:4])
 
-        return [class_ids, confidences, boxes]
+        out_boxes = self.resize(frame.shape, boxes)
+        return [class_ids, confidences, out_boxes]
+
+    def resize(self, frame_shape: tuple[int], boxes: list[Any]) -> list[list[Any]]:
+        """
+        Resize the box coordinates to the image dimensions
+        :param frame_shape: The size of the image
+        :param boxes: The raw boxes in the format x1, y1, x2, y2
+        :return: The resized boxes in the format (x1, y1), (x2, y2)
+        """
+        output_boxes = []
+
+        # Calculate the scale factor
+        image_height, image_width = frame_shape[:2]
+        x_scale = image_width / self.MODEL_SIZE[0]
+        y_scale = image_height / self.MODEL_SIZE[0]
+
+        # Resize the dimensions
+        for box in boxes:
+            x1, y1, x2, y2 = box
+            x1 = int(x1 * x_scale)
+            y1 = int(y1 * y_scale)
+            x2 = int(x2 * x_scale)
+            y2 = int(y2 * y_scale)
+            # Add box with the 2 points
+            output_boxes.append([(x1, y1), (x2, y2)])
+
+        return output_boxes

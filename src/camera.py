@@ -4,7 +4,7 @@ import time
 import cv2 as cv
 
 from src.settings import EyeCamSettings
-from src.drawer import Drawer, draw_label
+from src.drawer import Drawer, draw_label, draw_zones
 from src.yolo import YOLOv8Model, YOLOv5Model, YOLOv26Model
 
 class EyeCam:
@@ -16,7 +16,7 @@ class EyeCam:
 
         self.settings = EyeCamSettings()
         self.model = YOLOv26Model(self.settings)
-        self.drawer = Drawer(self.settings, self.model.MODEL_SIZE)
+        self.drawer = Drawer(self.settings)
 
         self.cam = cv.VideoCapture(0)
         self.fps_counter = 0
@@ -46,7 +46,8 @@ class EyeCam:
             draw_label(frame, f"FPS: {self.fps}", x=10, y=10)
 
             result = self.model.process(frame)
-            frame = self.drawer.draw(frame, result, self.model.nms, self.model.central_coordinates)
+            frame = self.drawer.draw(frame, result)
+            draw_zones(frame)
             cv.imshow("Eye Cam", frame)
 
             # End the loop if the key 'Q' was pressed
