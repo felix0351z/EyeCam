@@ -1,5 +1,9 @@
+# Python
 .idea/
 
 *.onnx
 *.pt
 *.JPG
+
+# Rust
+target/
