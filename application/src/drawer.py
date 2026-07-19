@@ -1,7 +1,7 @@
 import numpy as np
 import cv2 as cv
 
-from src.settings import EyeCamSettings
+from settings import EyeCamSettings
 
 # BGR
 COLOR_BLUE = (255, 0, 0)

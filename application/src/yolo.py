@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 import cv2 as cv
 
-from src.settings import EyeCamSettings
+from settings import EyeCamSettings
 
 
 class YOLOModel(abc.ABC):

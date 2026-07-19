@@ -3,7 +3,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-from src.detections.detection import DetectionAlgorithm
+from detections.detection import DetectionAlgorithm
 
 
 class ZoneBasedDetection(DetectionAlgorithm):
