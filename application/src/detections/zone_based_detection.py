@@ -12,10 +12,15 @@ class ZoneBasedDetection(DetectionAlgorithm):
         self.model_size = model_size
         self.percentages = [0.0, 0.0, 0.0]
 
-    def process_frame(self, frame: np.ndarray, net_output: list[list[Any]]) -> np.ndarray:
 
-        # Get the output data from the cnn model
-        class_ids, confidences, boxes = net_output
+    def calculate_zone_coverage(self, frame: np.ndarray, boxes: list[Any], debug: bool = True) -> np.ndarray:
+        """
+        Calculate the coverage of the 3 zones (left, middle, right) in percent.
+        :param frame: The input frame
+        :param boxes: The boxes returned by the cnn model. The boxes have to be in the format [x1, y1, x2, y2]
+        :param debug: If true, the coverage for the middle zone will be displayed
+        :return:
+        """
 
         # Calculate the zone coordinates
         zone_width = int(frame.shape[1] / 3)
@@ -23,9 +28,8 @@ class ZoneBasedDetection(DetectionAlgorithm):
         zone_size = zone_width * zone_height
         zones = np.array([[0, 1], [1, 2], [2, 3]]) * zone_width
 
-        # Calculate the space for every box in the 3 zones
+        # Calculate the coverage for every box in the 3 zones
         for (i, (x_start, x_end)) in enumerate(zones):
-
             per = []
             for box in boxes:
                 x1, y1 = box[0]
@@ -43,19 +47,24 @@ class ZoneBasedDetection(DetectionAlgorithm):
                 per.append(percentage)
 
                 # Debug preview for zone middle
-                if i == 1:
-                    debug_pt1 = (x1, y1)
-                    debug_pt2 = (x2, y2)
-                    cv2.rectangle(
-                        img=frame,
-                        pt1=debug_pt1,
-                        pt2=debug_pt2,
-                        color=(0, 255, 0),
-                        thickness=1,
-                    )
+                if debug:
+                    # Show the coverage for the middle zone
+                    if i == 1:
+                        debug_pt1 = (x1, y1)
+                        debug_pt2 = (x2, y2)
+                        cv2.rectangle(img=frame, pt1=debug_pt1, pt2=debug_pt2, color=(0, 255, 0), thickness=1)
 
             # Take the biggest box as reference
             if len(per) > 0:
                 self.percentages[i] = np.max(per)
+        return frame
+
+
+    def process_frame(self, frame: np.ndarray, net_output: list[list[Any]]) -> np.ndarray:
+        # Get the output data from the cnn model
+        class_ids, confidences, boxes = net_output
+
+        # Calculate the coverage of the 3 zones
+        frame = self.calculate_zone_coverage(frame, boxes)
 
         return frame
