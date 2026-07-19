@@ -3,6 +3,7 @@ import time
 
 import cv2 as cv
 
+from analyzer import Analyzer
 from detections.zone_based_detection import ZoneBasedDetection
 from src.settings import EyeCamSettings
 from src.drawer import Drawer, draw_label, draw_zones
@@ -19,6 +20,7 @@ class EyeCam:
         self.model = YOLOv26Model(self.settings)
         self.drawer = Drawer(self.settings)
         self.detection = ZoneBasedDetection(self.model.MODEL_SIZE)
+        self.analyzer = Analyzer()
 
         self.cam = cv.VideoCapture(0)
         self.fps_counter = 0
@@ -51,6 +53,7 @@ class EyeCam:
             frame = self.drawer.draw(frame, result)
             draw_zones(frame)
             frame = self.detection.process_frame(frame, result)
+            self.analyzer.send(self.detection.percentages)
             cv.imshow("Eye Cam", frame)
 
             # End the loop if the key 'Q' was pressed

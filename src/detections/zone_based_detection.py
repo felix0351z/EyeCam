@@ -10,7 +10,7 @@ class ZoneBasedDetection(DetectionAlgorithm):
 
     def __init__(self, model_size: tuple[int, int]):
         self.model_size = model_size
-        self.percentage = [0.0, 0.0, 0.0]
+        self.percentages = [0.0, 0.0, 0.0]
 
     def process_frame(self, frame: np.ndarray, net_output: list[list[Any]]) -> np.ndarray:
 
@@ -42,7 +42,7 @@ class ZoneBasedDetection(DetectionAlgorithm):
                 percentage = (width * height) / zone_size
                 per.append(percentage)
 
-                # Debug
+                # Debug preview for zone middle
                 if i == 1:
                     debug_pt1 = (x1, y1)
                     debug_pt2 = (x2, y2)
@@ -56,6 +56,6 @@ class ZoneBasedDetection(DetectionAlgorithm):
 
             # Take the biggest box as reference
             if len(per) > 0:
-                self.percentage[i] = np.max(per)
+                self.percentages[i] = np.max(per)
 
         return frame
