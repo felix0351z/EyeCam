@@ -7,7 +7,7 @@ from analyzer import Analyzer
 from detections.zone_based_detection import ZoneBasedDetection
 from settings import EyeCamSettings
 from drawer import Drawer, draw_label, draw_zones
-from yolo import YOLOv26Model
+from yolo import YOLOv26Model, YOLOv8Model, YOLOv5Model
 
 class EyeCam:
 

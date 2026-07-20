@@ -10,9 +10,18 @@ class Analyzer:
 
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((HOST, PORT))
+        self.closed = False
+
+        try:
+            self.socket.connect((HOST, PORT))
+        except socket.error:
+            print("Failed to connect to analyzer")
+            self.socket.close()
+            self.closed = True
 
     def send_sin(self):
+        if self.closed:
+            return
 
         t0 = time.time()
         while True:
@@ -30,6 +39,9 @@ class Analyzer:
             time.sleep(0.01) # 100 Hz
 
     def send(self, data: list[int]):
+        if self.closed:
+            return
+
         payload = b""
         for (i, value) in enumerate(data):
             payload += struct.pack("<if", i, value)

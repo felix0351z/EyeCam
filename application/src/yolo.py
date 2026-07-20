@@ -1,5 +1,5 @@
 import abc
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 import cv2 as cv
@@ -76,14 +76,13 @@ class YOLOModel(abc.ABC):
         return self.map_result(frame, result)
 
 
-# TODO: Implement resizing in the model
 class YOLOv8Model(YOLOModel):
 
     @property
     def model_path(self) -> str:
         return self.settings.PROJECT_PATH + "/models/yolov8n.onnx"
 
-    def map_result(self, result: np.ndarray) -> list[list[Any]]:
+    def map_result(self, frame: np.ndarray, result: np.ndarray) -> list[list[Any]]:
         class_ids = []
         confidences = []
         boxes = []
@@ -106,17 +105,62 @@ class YOLOv8Model(YOLOModel):
                 class_ids.append(class_id)
                 boxes.append(detection[:4])
 
-        return [class_ids, confidences, boxes]
+        # Resize and apply NMS
+        resized_boxes = self.resize(frame.shape, boxes)
+        indices, nms_boxes = self.nms(confidences, resized_boxes)
+        nms_class_ids = [class_ids[i] for i in indices]
+        nms_confidences = [confidences[i] for i in indices]
+
+        return [nms_class_ids, nms_confidences, nms_boxes]
 
 
-# TODO: Implement resizing in the model
-class YOLOv5Model(YOLOModel):
+    def nms(self, confidences: list[float], boxes: list[list[Any]]) -> tuple[Sequence[int], list[Any]]:
+        output_boxes = []
+
+        # Apply a NMS
+        indices = cv.dnn.NMSBoxes(
+            bboxes=boxes, scores=confidences,
+            score_threshold=self.settings.SCORE_THRESHOLD, nms_threshold=self.settings.NMS_THRESHOLD
+        )
+
+        # Take the boxes with the highest coverage
+        for i in indices:
+            box = boxes[i]
+            left, top, width, height = box
+            pt1 = (left, top)
+            pt2 = (left + width, top + height)
+
+            output_boxes.append([pt1, pt2])
+
+        return indices, output_boxes
+
+
+    def resize(self, image_shape: tuple[int], boxes: list[list[Any]]) -> list[list[Any]]:
+        output_boxes = []
+
+        # Calculate the scale factor
+        image_height, image_width = image_shape[:2]
+        x_scale = image_width / self.MODEL_SIZE[0]
+        y_scale = image_height / self.MODEL_SIZE[1]
+
+        for box in boxes:
+            x, y, w, h = box
+            left = int((x - w / 2) * x_scale)
+            top = int((y - h / 2) * y_scale)
+            width = int(w * x_scale)
+            height = int(h * y_scale)
+            output_boxes.append(np.array([left, top, width, height]))
+
+        return output_boxes
+
+
+class YOLOv5Model(YOLOv8Model):
 
     @property
     def model_path(self) -> str:
         return self.settings.PROJECT_PATH + "/models/yolov5s.onnx"
 
-    def map_result(self, result: np.ndarray) -> list[list[Any]]:
+    def map_result(self, frame: np.ndarray, result: np.ndarray) -> list[list[Any]]:
         class_ids = []
         confidences = []
         boxes = []
@@ -142,7 +186,13 @@ class YOLOv5Model(YOLOModel):
                     class_ids.append(class_id)
                     boxes.append(detection[:4])
 
-        return [class_ids, confidences, boxes]
+        # Resize and apply NMS
+        resized_boxes = self.resize(frame.shape, boxes)
+        indices, nms_boxes = self.nms(confidences, resized_boxes)
+        nms_class_ids = [class_ids[i] for i in indices]
+        nms_confidences = [confidences[i] for i in indices]
+
+        return [nms_class_ids, nms_confidences, nms_boxes]
 
 
 class YOLOv26Model(YOLOModel):
