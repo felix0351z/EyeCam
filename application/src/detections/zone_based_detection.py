@@ -1,4 +1,5 @@
 from typing import Any
+from collections import deque
 
 import cv2
 import numpy as np
@@ -10,7 +11,10 @@ class ZoneBasedDetection(DetectionAlgorithm):
 
     def __init__(self, model_size: tuple[int, int]):
         self.model_size = model_size
-        self.percentages = [0.0, 0.0, 0.0]
+        self.percentages = [deque(maxlen=10), deque(maxlen=10), deque(maxlen=10)]
+
+    def get_percentages(self):
+        return list(map(lambda d: np.average(d), self.percentages))
 
 
     def calculate_zone_coverage(self, frame: np.ndarray, boxes: list[Any], debug: bool = True) -> np.ndarray:
@@ -41,7 +45,9 @@ class ZoneBasedDetection(DetectionAlgorithm):
                     x2 = x_end
                 if x1 < x_start:
                     x1 = x_start
-                width = x2 - x1
+
+                # Negative values mean, that the box is in another zone, so these should be ignored
+                width = max(x2 - x1, 0)
 
                 percentage = (width * height) / zone_size
                 per.append(percentage)
@@ -56,7 +62,7 @@ class ZoneBasedDetection(DetectionAlgorithm):
 
             # Take the biggest box as reference
             if len(per) > 0:
-                self.percentages[i] = np.max(per)
+                self.percentages[i].append(np.max(per))
         return frame
 
 

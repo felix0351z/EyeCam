@@ -53,7 +53,7 @@ class EyeCam:
             frame = self.drawer.draw(frame, result)
             draw_zones(frame)
             frame = self.detection.process_frame(frame, result)
-            self.analyzer.send(self.detection.percentages)
+            self.analyzer.send(self.detection.get_percentages())
             cv.imshow("Eye Cam", frame)
 
             # End the loop if the key 'Q' was pressed

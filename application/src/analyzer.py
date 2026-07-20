@@ -38,7 +38,7 @@ class Analyzer:
             self.socket.sendall(payload)
             time.sleep(0.01) # 100 Hz
 
-    def send(self, data: list[int]):
+    def send(self, data: list[float]):
         if self.closed:
             return
 
