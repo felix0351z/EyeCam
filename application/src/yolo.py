@@ -4,6 +4,7 @@ from typing import Any, Sequence
 import numpy as np
 import cv2 as cv
 
+from letterbox import letterbox, LetterboxTransform
 from settings import EyeCamSettings
 
 
@@ -19,13 +20,14 @@ class YOLOModel(abc.ABC):
     @abc.abstractmethod
     def model_path(self) -> str:
         """
-        Path to the .onnx file
+        Path to the model file
+        This can be in the format .onnx or any other runtime format
         """
 
         pass
 
     @abc.abstractmethod
-    def map_result(self, frame: np.ndarray, result: np.ndarray) -> list[list[Any]]:
+    def map_result(self, frame: np.ndarray, result: np.ndarray, transform: LetterboxTransform) -> list[list[Any]]:
         """
         Map the result of the yolo model to a list in the format [class_ids, confidences, boxes]
         Every detection is one sequence, so class_ids[i] and confidences[i] are related to each other.
@@ -35,6 +37,7 @@ class YOLOModel(abc.ABC):
 
         :param frame: The image frame
         :param result: The output-layer of the model
+        :param transform The letterbox transformation from the preprocessing
         :return: [class_ids, confidences, boxes]
         """
 
@@ -47,10 +50,17 @@ class YOLOModel(abc.ABC):
         """
 
         self.settings = settings
-
-        # Load the onnx model
-        # TODO: Change to a more performaent engine another time
-        self.model: cv.dnn.Net = cv.dnn.readNet(self.model_path)
+        # Check if openvino is available. If not, fallback to the default onnx runtime from opencv
+        try:
+            import openvino as ov
+            core = ov.Core()
+            model = core.read_model(self.model_path)
+            self.use_ov = True
+            self.ov_compiled_model = core.compile_model(model, device_name="AUTO")
+            self.ov_out_layer = self.ov_compiled_model.output(0)
+        except ImportError:
+            self.use_ov = False
+            self.onnx_model: cv.dnn.Net = cv.dnn.readNet(self.model_path)
 
     def process(self, frame: np.ndarray) -> list[Any]:
         """
@@ -58,37 +68,41 @@ class YOLOModel(abc.ABC):
         :param frame: The image frame captured by opencv
         :return: The model result in the format [class_ids, confidences, boxes]
         """
-
+        resized, transform = letterbox(frame, model_size=self.MODEL_SIZE[0])
         # Create a blob from the frame
         # https://www.geeksforgeeks.org/python/how-opencvs-blobfromimage-works/
         blob = cv.dnn.blobFromImage(
-            image=frame,
+            image=resized,
             scalefactor=1 / 255,  # Multiply the pixel values by a scale factor to normalize them
             size=self.MODEL_SIZE,  # Scale to match the required size by the network
-            mean=[0, 0, 0],  # Remove color bias by subtracting this color values.
             swapRB=True,  # Convert OpenCV’s BGR format to RGB
             crop=False
         )
 
-        # Proceed with the model
-        self.model.setInput(blob)
-        result = self.model.forward(self.model.getUnconnectedOutLayersNames())
-        return self.map_result(frame, result)
+        if self.use_ov:
+            # OpenVino
+            result = self.ov_compiled_model(inputs=[blob])[self.ov_out_layer]
+        else:
+            # Default onnx runtime
+            self.onnx_model.setInput(blob)
+            result = self.onnx_model.forward(self.onnx_model.getUnconnectedOutLayersNames())
+
+        return self.map_result(frame, result, transform)
 
 
 class YOLOv8Model(YOLOModel):
 
     @property
     def model_path(self) -> str:
-        return self.settings.PROJECT_PATH + "/models/yolov8n.onnx"
+        return self.settings.PROJECT_PATH + "/models/yolov8n_openvino_model/yolov8n.xml"
 
-    def map_result(self, frame: np.ndarray, result: np.ndarray) -> list[list[Any]]:
+    def map_result(self, frame: np.ndarray, result: np.ndarray, transform) -> list[list[Any]]:
         class_ids = []
         confidences = []
         boxes = []
 
         # yolo_v8 has two twisted axes, therefore we need to transpose them
-        detections = np.transpose(result[0][0])
+        detections = np.transpose(result[0])
 
         # Go through every detection
         for detection in detections:
@@ -106,7 +120,7 @@ class YOLOv8Model(YOLOModel):
                 boxes.append(detection[:4])
 
         # Resize and apply NMS
-        resized_boxes = self.resize(frame.shape, boxes)
+        resized_boxes = self.resize(boxes, transform)
         indices, nms_boxes = self.nms(confidences, resized_boxes)
         nms_class_ids = [class_ids[i] for i in indices]
         nms_confidences = [confidences[i] for i in indices]
@@ -135,20 +149,15 @@ class YOLOv8Model(YOLOModel):
         return indices, output_boxes
 
 
-    def resize(self, image_shape: tuple[int], boxes: list[list[Any]]) -> list[list[Any]]:
+    def resize(self, boxes: list[list[Any]], transform: LetterboxTransform) -> list[list[Any]]:
         output_boxes = []
-
-        # Calculate the scale factor
-        image_height, image_width = image_shape[:2]
-        x_scale = image_width / self.MODEL_SIZE[0]
-        y_scale = image_height / self.MODEL_SIZE[1]
 
         for box in boxes:
             x, y, w, h = box
-            left = int((x - w / 2) * x_scale)
-            top = int((y - h / 2) * y_scale)
-            width = int(w * x_scale)
-            height = int(h * y_scale)
+            left = int(((x - w / 2) - transform.pad_x) / transform.scale)
+            top = int(((y - h / 2) - transform.pad_y) / transform.scale)
+            width = int(w / transform.scale)
+            height = int(h / transform.scale)
             output_boxes.append(np.array([left, top, width, height]))
 
         return output_boxes
@@ -160,12 +169,12 @@ class YOLOv5Model(YOLOv8Model):
     def model_path(self) -> str:
         return self.settings.PROJECT_PATH + "/models/yolov5s.onnx"
 
-    def map_result(self, frame: np.ndarray, result: np.ndarray) -> list[list[Any]]:
+    def map_result(self, frame: np.ndarray, result: np.ndarray, transform) -> list[list[Any]]:
         class_ids = []
         confidences = []
         boxes = []
 
-        detections = result[0][0]
+        detections = result[0]
 
         # Go through every detection
         for detection in detections:
@@ -187,7 +196,7 @@ class YOLOv5Model(YOLOv8Model):
                     boxes.append(detection[:4])
 
         # Resize and apply NMS
-        resized_boxes = self.resize(frame.shape, boxes)
+        resized_boxes = self.resize(boxes, transform)
         indices, nms_boxes = self.nms(confidences, resized_boxes)
         nms_class_ids = [class_ids[i] for i in indices]
         nms_confidences = [confidences[i] for i in indices]
@@ -199,14 +208,14 @@ class YOLOv26Model(YOLOModel):
 
     @property
     def model_path(self) -> str:
-        return self.settings.PROJECT_PATH + "/models/yolo26n.onnx"
+        return self.settings.PROJECT_PATH + "/models/yolo26n_openvino_model/yolo26n.xml"
 
-    def map_result(self, frame: np.ndarray, result: np.ndarray) -> list[Any]:
+    def map_result(self, frame: np.ndarray, result: np.ndarray, transform: LetterboxTransform) -> list[Any]:
         class_ids = []
         confidences = []
         boxes = []
 
-        detections = result[0][0]
+        detections = result[0]
 
         # Go through every detection
         for detection in detections:
@@ -223,30 +232,25 @@ class YOLOv26Model(YOLOModel):
                 class_ids.append(detection[5])
                 boxes.append(detection[:4])
 
-        out_boxes = self.resize(frame.shape, boxes)
+        out_boxes = self.resize(boxes, transform)
         return [class_ids, confidences, out_boxes]
 
-    def resize(self, frame_shape: tuple[int], boxes: list[Any]) -> list[list[Any]]:
+    def resize(self, boxes: list[Any], transform: LetterboxTransform) -> list[list[Any]]:
         """
         Resize the box coordinates to the image dimensions
-        :param frame_shape: The size of the image
         :param boxes: The raw boxes in the format x1, y1, x2, y2
+        :param transform: The Letterbox information from the preprocessing
         :return: The resized boxes in the format (x1, y1), (x2, y2)
         """
         output_boxes = []
 
-        # Calculate the scale factor
-        image_height, image_width = frame_shape[:2]
-        x_scale = image_width / self.MODEL_SIZE[0]
-        y_scale = image_height / self.MODEL_SIZE[0]
-
         # Resize the dimensions
         for box in boxes:
             x1, y1, x2, y2 = box
-            x1 = int(x1 * x_scale)
-            y1 = int(y1 * y_scale)
-            x2 = int(x2 * x_scale)
-            y2 = int(y2 * y_scale)
+            x1 = int((x1 - transform.pad_x) * transform.scale)
+            y1 = int((y1 - transform.pad_y) * transform.scale)
+            x2 = int((x2 - transform.pad_x) * transform.scale)
+            y2 = int((y2 - transform.pad_y) * transform.scale)
             # Add box with the 2 points
             output_boxes.append([(x1, y1), (x2, y2)])
 

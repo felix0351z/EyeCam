@@ -1,11 +1,12 @@
 import os
 from ultralytics import YOLO
 
-name = "yolo26n"
+name_yolo26 = "yolo26n"
+name_yolo8  = "yolov8n"
+name_yolo5  = "yolov5n"
 
 # Build and export the model to the onnx format
-model = YOLO(model=f"{name}.pt")
-model.export(format="onnx")
+model = YOLO(model=f"{name_yolo26}.pt")
 
-# Place the file in the modules dictionary
-os.replace(f"{name}.onnx", f"../src/models/{name}.onnx")
+# Accepted formats: onnx, openvino, ...
+model.export(format="openvino")
