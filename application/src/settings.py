@@ -8,6 +8,8 @@ class EyeCamSettings:
     This is the src/ folder here
     """
 
+    MODEL_PATH = PROJECT_PATH + "/models/yolo26n_openvino_model/yolo26n.xml"
+
     COCO_FILE_PATH = PROJECT_PATH + "/models/coco.names"
     """
     Path to the coco.names file.
