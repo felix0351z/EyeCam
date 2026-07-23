@@ -6,6 +6,7 @@ import cv2 as cv
 
 from letterbox import letterbox, LetterboxTransform
 from settings import EyeCamSettings
+from framework import load
 
 
 class YOLOModel(abc.ABC):
@@ -15,16 +16,6 @@ class YOLOModel(abc.ABC):
     This is the default image size used by the yolo models.
     https://docs.ultralytics.com/tasks/detect#train
     """
-
-    @property
-    @abc.abstractmethod
-    def model_path(self) -> str:
-        """
-        Path to the model file
-        This can be in the format .onnx or any other runtime format
-        """
-
-        pass
 
     @abc.abstractmethod
     def map_result(self, frame: np.ndarray, result: np.ndarray, transform: LetterboxTransform) -> list[list[Any]]:
@@ -50,17 +41,8 @@ class YOLOModel(abc.ABC):
         """
 
         self.settings = settings
-        # Check if openvino is available. If not, fallback to the default onnx runtime from opencv
-        try:
-            import openvino as ov
-            core = ov.Core()
-            model = core.read_model(self.model_path)
-            self.use_ov = True
-            self.ov_compiled_model = core.compile_model(model, device_name="AUTO")
-            self.ov_out_layer = self.ov_compiled_model.output(0)
-        except ImportError:
-            self.use_ov = False
-            self.onnx_model: cv.dnn.Net = cv.dnn.readNet(self.model_path)
+        self.model_framework = load(self.settings.MODEL_PATH)
+
 
     def process(self, frame: np.ndarray) -> list[Any]:
         """
@@ -79,22 +61,11 @@ class YOLOModel(abc.ABC):
             crop=False
         )
 
-        if self.use_ov:
-            # OpenVino
-            result = self.ov_compiled_model(inputs=[blob])[self.ov_out_layer]
-        else:
-            # Default onnx runtime
-            self.onnx_model.setInput(blob)
-            result = self.onnx_model.forward(self.onnx_model.getUnconnectedOutLayersNames())
-
+        result = self.model_framework.forward(blob)
         return self.map_result(frame, result, transform)
 
 
 class YOLOv8Model(YOLOModel):
-
-    @property
-    def model_path(self) -> str:
-        return self.settings.PROJECT_PATH + "/models/yolov8n_openvino_model/yolov8n.xml"
 
     def map_result(self, frame: np.ndarray, result: np.ndarray, transform) -> list[list[Any]]:
         class_ids = []
@@ -165,10 +136,6 @@ class YOLOv8Model(YOLOModel):
 
 class YOLOv5Model(YOLOv8Model):
 
-    @property
-    def model_path(self) -> str:
-        return self.settings.PROJECT_PATH + "/models/yolov5s.onnx"
-
     def map_result(self, frame: np.ndarray, result: np.ndarray, transform) -> list[list[Any]]:
         class_ids = []
         confidences = []
@@ -205,10 +172,6 @@ class YOLOv5Model(YOLOv8Model):
 
 
 class YOLOv26Model(YOLOModel):
-
-    @property
-    def model_path(self) -> str:
-        return self.settings.PROJECT_PATH + "/models/yolo26n_openvino_model/yolo26n.xml"
 
     def map_result(self, frame: np.ndarray, result: np.ndarray, transform: LetterboxTransform) -> list[Any]:
         class_ids = []
