@@ -53,6 +53,7 @@ class OpenCVOnnxFramework(Framework):
         self.net: cv.dnn.Net = cv.dnn.readNet(model_path)
 
     def forward(self, input_frame: np.ndarray) -> np.ndarray:
+        print("forward onnx")
         self.net.setInput(input_frame)
         return self.net.forward(self.net.getUnconnectedOutLayersNames())[0]
 
@@ -74,6 +75,7 @@ class OpenVinoFramework(Framework):
         self.ov_output_layer = self.ov_compiled_model.output(0)
 
     def forward(self, input_frame: np.ndarray) -> np.ndarray:
+        print("forward openvino")
         return self.ov_compiled_model(inputs=[input_frame])[self.ov_output_layer]
 
 
@@ -94,6 +96,7 @@ class NCNNFramework(Framework):
         self.extractor = self.net.create_extractor()
 
     def forward(self, input_frame: np.ndarray) -> np.ndarray:
+        print("forward ncnn")
         mat = self.ncnn.Mat(input_frame)
         self.extractor.input("in0", mat)
 
