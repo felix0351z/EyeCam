@@ -94,5 +94,5 @@ class NCNNFramework(Framework):
         mat = self.ncnn.Mat(input_frame)
         self.extractor.input("in0", mat)
 
-        ret, out = self.extractor.extrat("out0")
+        ret, out = self.extractor.extract("out0")
         return np.array(out)
