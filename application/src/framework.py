@@ -30,10 +30,13 @@ def load(model_path: str) -> Framework:
     """
 
     if find_spec("ncnn") is not None:
+        print("Loading NCNN framework")
         return NCNNFramework(model_path)
     elif find_spec("openvino") is not None:
+        print("Loading OpenVINO framework")
         return OpenVinoFramework(model_path)
     else:
+        print("Loading OpenCV ONNX framework")
         return OpenCVOnnxFramework(model_path)
 
 
