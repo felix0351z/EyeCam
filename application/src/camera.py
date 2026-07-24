@@ -22,9 +22,18 @@ class EyeCam:
         self.detection = ZoneBasedDetection(self.model.MODEL_SIZE)
         self.analyzer = Analyzer()
 
-        self.cam = cv.VideoCapture(0)
         self.fps_counter = 0
         self.fps = 0
+
+        # Check if Picamera2 is available
+        try:
+            from picamera2 import Picamera2
+            self.use_picam = True
+            self.picam = Picamera2()
+            self.configure_picam()
+        except ImportError:
+            self.cam = cv.VideoCapture(0)
+            self.use_picam = False
 
     def run(self):
         """
@@ -33,10 +42,14 @@ class EyeCam:
         time_start = time.time()
 
         while True:
-            success, frame = self.cam.read()
-            # Stop the program if no data source is available
-            if not success:
-                sys.exit("Failure: Unable to capture video. Please verify your camera settings.")
+
+            if self.use_picam:
+                frame = self.picam.capture_array()
+            else:
+                success, frame = self.cam.read()
+                # Stop the program if no data source is available
+                if not success:
+                    sys.exit("Failure: Unable to capture video. Please verify your camera settings.")
 
             # Calculate the current FPS
             # This is an average measurement over 10 frames
@@ -61,8 +74,18 @@ class EyeCam:
                 break
 
         # Stop the program
-        self.cam.release()
+        if self.use_picam:
+            self.picam.stop()
+        else:
+            self.cam.release()
         cv.destroyAllWindows()
+
+    def configure_picam(self):
+        config = self.picam.create_preview_configuration(
+            main={"size": (640, 640), "format": "RGB888"}
+        )
+        self.picam.configure(config)
+        self.picam.start()
 
 
 
