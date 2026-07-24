@@ -17,7 +17,7 @@ class EyeCam:
         """
 
         self.settings = EyeCamSettings()
-        self.model = YOLOv26Model(self.settings)
+        self.model = YOLOv8Model(self.settings)
         self.drawer = Drawer(self.settings)
         self.detection = ZoneBasedDetection(self.model.MODEL_SIZE)
         self.analyzer = Analyzer()
