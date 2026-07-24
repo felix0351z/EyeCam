@@ -95,4 +95,5 @@ class NCNNFramework(Framework):
         self.extractor.input("in0", mat)
 
         ret, out = self.extractor.extract("out0")
+        print(np.array(out).shape)
         return np.array(out)
