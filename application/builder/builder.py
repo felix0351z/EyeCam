@@ -1,12 +1,19 @@
-import os
+import sys
 from ultralytics import YOLO
 
-name_yolo26 = "yolo26n"
-name_yolo8  = "yolov8n"
-name_yolo5  = "yolov5n"
+if sys.argv[1] is None:
+    print("Please provide a valid yolo model name\n"
+          "Use python builder.py <yolo-model-name <export-format>")
+    exit(1)
 
-# Build and export the model to the onnx format
-model = YOLO(model=f"{name_yolo26}.pt")
+if sys.argv[2] is None:
+    print("Please provide a export format.\n"
+          "Use python builder.py <yolo-model-name <export-format>")
+    exit(1)
 
-# Accepted formats: onnx, openvino, ...
-model.export(format="openvino")
+# Load the model from the .pt file.
+# If the file isn't available it will be downloaded.
+# Then export the model.
+# See https://docs.ultralytics.com/modes/export#arguments
+model = YOLO(model=f"{sys.argv[1]}.pt")
+model.export(format=sys.argv[2])
