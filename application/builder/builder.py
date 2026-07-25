@@ -1,14 +1,9 @@
 import sys
 from ultralytics import YOLO
 
-if sys.argv[1] is None:
-    print("Please provide a valid yolo model name\n"
-          "Use python builder.py <yolo-model-name <export-format>")
-    exit(1)
-
-if sys.argv[2] is None:
-    print("Please provide a export format.\n"
-          "Use python builder.py <yolo-model-name <export-format>")
+if len(sys.argv) != 3:
+    print("Please provide a valid yolo model name and an export format.\n"
+          "Use python builder.py <yolo-model-name> <export-format>")
     exit(1)
 
 # Load the model from the .pt file.
