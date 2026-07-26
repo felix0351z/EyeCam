@@ -1,9 +1,8 @@
-import openvino as ov
 import numpy as np
 
-from core.interfaces import Framework, YOLOInput
-from processing.blob import create_blob
-from processing.letterbox import letterbox
+from yolo.interfaces import Framework, YOLOInput
+from yolo.utils.blob import create_blob
+from yolo.utils.letterbox import letterbox
 
 
 class OpenvinoFramework(Framework):
@@ -11,9 +10,10 @@ class OpenvinoFramework(Framework):
     OpenVINO is a framework by Intel to run AI models on Intel CPUs and embedded platforms.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, config: dict):
+        import openvino as ov
         core = ov.Core()
-        model = core.read_model(model=kwargs["xml_file"], weights=kwargs["bin_file"])
+        model = core.read_model(config["model_path"])
 
         self.ov_compiled_model = core.compile_model(model, device_name="AUTO")
         self.ov_output_layer = self.ov_compiled_model.output(0)

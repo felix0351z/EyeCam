@@ -9,4 +9,4 @@ name_yolo5  = "yolov5n"
 model = YOLO(model=f"{name_yolo26}.pt")
 
 # Accepted formats: onnx, openvino, ...
-model.export(format="openvino")
+model.export(format="onnx", end2end=True)

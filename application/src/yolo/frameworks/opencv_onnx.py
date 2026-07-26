@@ -1,9 +1,9 @@
 import cv2 as cv
 import numpy as np
 
-from core.interfaces import Framework, YOLOInput
-from processing.blob import create_blob
-from processing.letterbox import letterbox
+from yolo.interfaces import Framework, YOLOInput
+from yolo.utils.blob import create_blob
+from yolo.utils.letterbox import letterbox
 
 
 class OpenCVOnnxFramework(Framework):
@@ -12,9 +12,9 @@ class OpenCVOnnxFramework(Framework):
     This supports the ONNX engine to run .onnx models.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, config: dict):
         # Load the model
-        self.net: cv.dnn.Net = cv.dnn.readNet(kwargs["onnx_file"])
+        self.net: cv.dnn.Net = cv.dnn.readNet(config["model_path"])
         self.output_layer = self.net.getUnconnectedOutLayersNames()
 
 

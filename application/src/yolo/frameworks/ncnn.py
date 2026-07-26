@@ -1,8 +1,7 @@
-import ncnn
 import numpy as np
 
-from core.interfaces import Framework, YOLOInput
-from processing.letterbox import letterbox
+from yolo.interfaces import Framework, YOLOInput
+from yolo.utils.letterbox import letterbox
 
 
 class NCNNFramework(Framework):
@@ -11,10 +10,12 @@ class NCNNFramework(Framework):
     This is usually one of the best frameworks to run with a Raspberry Pi
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, config: dict):
+        import ncnn
+
         self.net = ncnn.Net()
-        self.net.load_param(kwargs["param_file"])
-        self.net.load_model(kwargs["bin_file"])
+        self.net.load_param(config["model_path"] + "/model.ncnn.params")
+        self.net.load_model(config["model_path"] + "/model.ncnn.bin")
         self.extractor = self.net.create_extractor()
 
     def pre_process(self, image: np.ndarray) -> YOLOInput:
