@@ -14,7 +14,7 @@ class NCNNFramework(Framework):
         self.ncnn = __import__("ncnn")
 
         self.net = self.ncnn.Net()
-        self.net.load_param(config["model_path"] + "/model.ncnn.params")
+        self.net.load_param(config["model_path"] + "/model.ncnn.param")
         self.net.load_model(config["model_path"] + "/model.ncnn.bin")
         self.extractor = self.net.create_extractor()
 
