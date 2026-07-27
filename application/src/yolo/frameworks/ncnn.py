@@ -11,9 +11,9 @@ class NCNNFramework(Framework):
     """
 
     def __init__(self, config: dict):
-        import ncnn
+        self.ncnn = __import__("ncnn")
 
-        self.net = ncnn.Net()
+        self.net = self.ncnn.Net()
         self.net.load_param(config["model_path"] + "/model.ncnn.params")
         self.net.load_model(config["model_path"] + "/model.ncnn.bin")
         self.extractor = self.net.create_extractor()
@@ -23,9 +23,9 @@ class NCNNFramework(Framework):
         height, width = resized.shape[:2]
 
         # Convert it in to a Mat object and switch BGR to RGB
-        mat = ncnn.Mat.from_pixels(
+        mat = self.ncnn.Mat.from_pixels(
             resized,
-            ncnn.Mat.PixelType.PIXEL_BGR2RGB,
+            self.ncnn.Mat.PixelType.PIXEL_BGR2RGB,
             width, height
         )
 
