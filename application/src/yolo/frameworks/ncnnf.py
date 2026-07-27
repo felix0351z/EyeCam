@@ -3,6 +3,8 @@ import numpy as np
 from yolo.interfaces import Framework, YOLOInput
 from yolo.utils.letterbox import letterbox
 
+import ncnn
+
 
 class NCNNFramework(Framework):
     """
@@ -11,30 +13,33 @@ class NCNNFramework(Framework):
     """
 
     def __init__(self, config: dict):
-        self.ncnn = __import__("ncnn")
-
-        self.net = self.ncnn.Net()
+        self.net = ncnn.Net()
         self.net.load_param(config["model_path"] + "/model.ncnn.param")
         self.net.load_model(config["model_path"] + "/model.ncnn.bin")
-        self.extractor = self.net.create_extractor()
 
     def pre_process(self, image: np.ndarray) -> YOLOInput:
         resized, transform = letterbox(image)
         height, width = resized.shape[:2]
 
         # Convert it in to a Mat object and switch BGR to RGB
-        mat = self.ncnn.Mat.from_pixels(
+        mat_in = ncnn.Mat.from_pixels(
             resized,
-            self.ncnn.Mat.PixelType.PIXEL_BGR2RGB,
+            ncnn.Mat.PixelType.PIXEL_BGR2RGB,
             width, height
         )
 
-        return YOLOInput(mat, transform)
+        # Perform a normalization
+        mean_vals = [0.0, 0.0, 0.0]
+        norm_vals = [1 / 255.0, 1 / 255.0, 1 / 255.0]
+        mat_in.substract_mean_normalize(mean_vals, norm_vals)
+
+        return YOLOInput(mat_in, transform)
 
 
 
     def infer(self, data: YOLOInput) -> np.ndarray:
-        self.extractor.input("in0", data.input)
+        extractor = self.net.create_extractor()
+        extractor.input("in0", data.input)
 
-        ret, out = self.extractor.extract("out0")
+        ret, out = extractor.extract("out0")
         return np.expand_dims(np.array(out), axis=0)
