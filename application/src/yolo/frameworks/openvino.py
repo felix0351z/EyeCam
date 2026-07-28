@@ -13,7 +13,7 @@ class OpenvinoFramework(Framework):
     def __init__(self, config: dict):
         import openvino as ov
         core = ov.Core()
-        model = core.read_model(config["model_path"] + "/yolo26n.xml")
+        model = core.read_model(config["model_path"])
 
         self.ov_compiled_model = core.compile_model(model, device_name="AUTO")
         self.ov_output_layer = self.ov_compiled_model.output(0)

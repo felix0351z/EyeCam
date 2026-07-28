@@ -18,12 +18,12 @@ def draw(data: YOLOOutput):
     """
     for i, box in enumerate(data.boxes):
         # Draw the boxes
-        pt1, pt2 = box
-        cv.rectangle(img=data.image, pt1=box[0], pt2=box[1], color=COLOR_BLUE, thickness=3)
+        x1, y1, x2, y2 = box
+        cv.rectangle(img=data.image, pt1=(x1, y1), pt2=(x2, y2), color=COLOR_BLUE, thickness=3)
 
         # Draw the label
         label = "{}: {:.2f}".format(int(data.class_ids[i]), data.confidences[i])
-        draw_label(data.image, label, x=pt1[0], y=pt1[1])
+        draw_label(data.image, label, x=x1, y=y1)
 
 
 def draw_zones(frame: np.ndarray):

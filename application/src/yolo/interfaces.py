@@ -18,9 +18,9 @@ class YOLOInput:
 @dataclass
 class YOLOOutput:
     image: np.ndarray
-    confidences: list[float]
-    class_ids: list[int]
-    boxes: list[np.ndarray]
+    confidences: np.ndarray
+    class_ids: np.ndarray
+    boxes: np.ndarray
 
 
 class Framework(abc.ABC):

@@ -31,49 +31,44 @@ def letterbox(frame: np.ndarray, model_size: int = 640, color=(114, 114, 114)):
 
     return canvas, LetterboxTransform(scale, left, top)
 
-def resize_boxes_central_coordinates(boxes: list[np.ndarray], transform: LetterboxTransform) -> list[np.ndarray]:
-    output = []
-    for box in boxes:
-        x, y, w, h = box
-        left = int(((x - w / 2) - transform.pad_x) / transform.scale)
-        top = int(((y - h / 2) - transform.pad_y) / transform.scale)
-        width = int(w / transform.scale)
-        height = int(h / transform.scale)
-        output.append(np.array([left, top, width, height]))
+def resize_boxes_central_coordinates(boxes: np.ndarray, transform: LetterboxTransform) -> np.ndarray:
+    x, y = boxes[:, 0], boxes[:, 1]
+    w, h = boxes[:, 2], boxes[:, 3]
 
-    return output
+    left = ((x - w / 2) - transform.pad_x) / transform.scale
+    top = ((y - h / 2) - transform.pad_y) / transform.scale
+    width = w / transform.scale
+    height = h / transform.scale
 
-def resize_boxes(boxes: list[np.ndarray], transform: LetterboxTransform)-> list[np.ndarray]:
-    output = []
-    for box in boxes:
-        x1, y1, x2, y2 = box
-        x1 = int((x1 - transform.pad_x) / transform.scale)
-        y1 = int((y1 - transform.pad_y) / transform.scale)
-        x2 = int((x2 - transform.pad_x) / transform.scale)
-        y2 = int((y2 - transform.pad_y) / transform.scale)
-        output.append(np.array([[x1, y1], [x2, y2]]))
-        #output.append([(x1, y1), (x2, y2)])
+    return np.column_stack([left, top, width, height]).astype(int)
 
-    return output
+
+def resize_boxes(boxes: np.ndarray, transform: LetterboxTransform)-> np.ndarray:
+    x1, y1 = boxes[:, 0], boxes[:, 1]
+    x2, y2 = boxes[:, 2], boxes[:, 3]
+
+    x1 = (x1 - transform.pad_x) / transform.scale
+    y1 = (y1 - transform.pad_y) / transform.scale
+    x2 = (x2 - transform.pad_x) / transform.scale
+    y2 = (y2 - transform.pad_y) / transform.scale
+
+    return np.column_stack([x1, y1, x2, y2]).astype(int)
 
 
 def nms(data: YOLOOutput, score_threshold: float, nms_threshold: float = 0.45):
-    output_boxes = []
-
     # Apply a NMS
     indices = cv.dnn.NMSBoxes(
         bboxes=data.boxes, scores=data.confidences,
         score_threshold=score_threshold, nms_threshold=nms_threshold
     )
 
-    for i in indices:
-        box = data.boxes[i]
-        left, top, width, height = box
-        output_boxes.append(np.array([[left, top], [left+width, top+height]]))
-        #pt1 = (left, top)
-        #pt2 = (left + width, top + height)
-        #output_boxes.append([pt1, pt2])
+    indices = np.array(indices)
 
-    data.boxes = output_boxes
-    data.confidences = [data.confidences[i] for i in indices]
-    data.class_ids = [data.class_ids[i] for i in indices]
+    left = data.boxes[indices, 0]
+    top = data.boxes[indices, 1]
+    width = data.boxes[indices, 2]
+    height = data.boxes[indices, 3]
+
+    data.boxes = np.column_stack([left, top, left+width, top+height])
+    data.confidences = data.confidences[indices]
+    data.class_ids = data.class_ids[indices]
