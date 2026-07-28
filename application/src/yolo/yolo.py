@@ -7,7 +7,7 @@ from yolo.interfaces import Framework, YOLOProcessor, YOLOOutput
 
 from yolo.frameworks.opencv_onnx import OpenCVOnnxFramework
 from yolo.frameworks.openvino import OpenvinoFramework
-from yolo.frameworks.ncnn import NCNNFramework
+from yolo.frameworks.ncnnf import NCNNFramework
 
 from yolo.processors import YOLOv5Processor, YOLOv8Processor, YOLOv26EndToEndProcessor
 
