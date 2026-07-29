@@ -1,0 +1,40 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+class LetterboxTransformation <<dataclass>> {
+    scale: float
+    pad_x: float
+    pad_y: float
+}
+
+class YoloInput <<dataclass>> {
+    input: np.ndarray
+    transform: LetterboxTransformation
+}
+
+class YoloOutput <<dataclass>> {
+    image: np.ndarray
+    confidences: np.ndarray
+    class_ids: np.ndarray
+    boxes: np.ndarray
+}
+
+abstract class YoloModel {
+    + def pre_process(image: np.ndarray): YoloInput
+    + def infer(data: YoloInput): np.ndarray
+    + def {abstract} post_process(image: np.ndarray, transform: LetterboxTransformation): YoloOutput
+}
+
+class Yolo26Model {
+    + def post_process(image: np.ndarray, transform: LetterboxTransformation): YoloOutput
+}
+
+class Yolo8Model {
+    + def post_process(image: np.ndarray, transform: LetterboxTransformation): YoloOutput
+}
+
+YoloModel <|--- Yolo8Model
+YoloModel <|--- Yolo26Model
+
+
+@enduml
