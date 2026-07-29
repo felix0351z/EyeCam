@@ -1,7 +1,6 @@
 # Python
 .idea/
 
-*.onnx
 *.pt
 *.JPG
 

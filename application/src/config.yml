@@ -1,0 +1,8 @@
+yolo:
+  framework:
+    # Valid frameworks are onnx, openvino or ncnn
+    name: onnx
+    model_path: /home/felix/PycharmProjects/EyeCam/application/models/yolo26n.onnx
+  processor:
+    # Valid yolo-processors are v5, v8 and v26-end2end
+    name: v26-end2end
