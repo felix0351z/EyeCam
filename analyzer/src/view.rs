@@ -1,8 +1,7 @@
-use std::time::{Duration};
-use eframe::{App, Frame};
-use egui::Ui;
-use egui_plot::{Line, Plot, PlotPoints, PlotResponse};
 use crate::viewmodel::AnalyzerViewModel;
+use egui::Ui;
+use egui_plot::{Line, Plot};
+use std::time::Duration;
 
 pub struct AnalyzerView {
     vm: AnalyzerViewModel
@@ -19,17 +18,13 @@ impl Default for AnalyzerView {
 }
 
 
-/// UI Top Root
-impl App for AnalyzerView {
-    fn ui(&mut self, ui: &mut Ui, _frame: &mut Frame) {
-        egui::CentralPanel::default().show(ui, |ui| {
-            self.show_plot(ui)
-        });
-    }
-}
 
 /// All UI Panels
 impl AnalyzerView {
+
+    pub fn ui_bevy(&mut self, ui: &mut Ui) {
+        self.show_plot(ui)
+    }
 
 
     fn show_plot(&mut self, ui: &mut Ui) {
