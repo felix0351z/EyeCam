@@ -1,13 +1,14 @@
-use crate::reader::{spawn_eyecam_reader, EyeCamData, GraphLabel};
+use crate::reader::{packets::Packet, spawn_eyecam_reader};
+use egui_plot::PlotPoints;
 use std::collections::VecDeque;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::time::Instant;
-use egui::IntoAtoms;
-use egui_plot::{PlotPoint, PlotPoints};
+use crate::reader::packets::packet::Payload;
+use crate::reader::packets::{GraphLabel, GraphPacket, YoloPacket};
 
 pub struct AnalyzerViewModel {
-    rx: Receiver<EyeCamData>,
+    rx: Receiver<Packet>,
     zone_left: VecDeque<f32>,
     zone_middle: VecDeque<f32>,
     zone_right: VecDeque<f32>,
@@ -15,12 +16,27 @@ pub struct AnalyzerViewModel {
     pub start_time: Instant
 }
 
+trait AddGraphValue {
+    fn add_graph_value(&mut self, value: f32, max_len: usize);
+}
+
+impl AddGraphValue for VecDeque<f32> {
+
+    fn add_graph_value(&mut self, value: f32, max_len: usize) {
+        self.push_back(value);
+        if self.len() > max_len {
+            self.pop_front();
+        }
+    }
+
+}
+
 
 impl AnalyzerViewModel {
     
     pub fn new() -> AnalyzerViewModel {
         // Start listening
-        let (tx, rx) = mpsc::channel::<EyeCamData>();
+        let (tx, rx) = mpsc::channel::<Packet>();
         let n_points = 2000;
 
         spawn_eyecam_reader(tx);
@@ -33,34 +49,43 @@ impl AnalyzerViewModel {
         }
     }
 
-    pub fn fetch_data(&mut self) -> Vec<PlotPoints> {
-        while let Ok(data) = self.rx.try_recv() {
+    fn receive_yolo_packet(&self, packet: YoloPacket) {
 
-            // Apply for zone middle
-            for graph in data.graphs {
-                match graph.label {
-                    GraphLabel::ZoneLeft => {
-                        self.zone_left.push_back(graph.value);
-                        if self.zone_left.len() > self.max_points {
-                            self.zone_left.pop_front();
-                        }
-                    }
-                    GraphLabel::ZoneMiddle => {
-                        self.zone_middle.push_back(graph.value);
-                        if self.zone_middle.len() > self.max_points {
-                            self.zone_middle.pop_front();
-                        }
-                    }
-                    GraphLabel::ZoneRight => {
-                        self.zone_right.push_back(graph.value);
-                        if self.zone_right.len() > self.max_points {
-                            self.zone_right.pop_front();
-                        }
-                    }
-                }
+    }
+
+    fn receive_graph_packet(&mut self, packet: GraphPacket) {
+        // Apply for zone middle
+        for graph in packet.graphs {
+            let label = GraphLabel::try_from(graph.name).unwrap();
+
+            match label {
+                GraphLabel::ZoneLeft =>
+                    self.zone_left.add_graph_value(graph.value, self.max_points),
+                GraphLabel::ZoneMiddle =>
+                    self.zone_middle.add_graph_value(graph.value, self.max_points),
+                GraphLabel::ZoneRight =>
+                    self.zone_right.add_graph_value(graph.value, self.max_points),
             }
         }
 
+    }
+
+    pub fn fetch_data(&mut self) -> Vec<PlotPoints> {
+        while let Ok(packet) = self.rx.try_recv() {
+
+            match packet.payload {
+                None => { println!("Received empty packet.") }
+                Some(payload) => {
+                    match payload {
+                        Payload::Yolo(yolo) => self.receive_yolo_packet(yolo),
+                        Payload::Graph(graph) => self.receive_graph_packet(graph)
+                    }
+                }
+            }
+
+        }
+
+        //TODO: In extra Funktion auslagern / Aufruf überdenken
         let graphs = [&self.zone_left, &self.zone_middle, &self.zone_right];
         let points: Vec<PlotPoints> = graphs
             .iter()

@@ -1,0 +1,43 @@
+syntax = "proto3";
+package packets;
+
+
+message Detection {
+  uint32 class_id = 1;
+  float confidence = 2;
+  float x1 = 3;
+  float y1 = 4;
+  float x2 = 5;
+  float y2 = 6;
+}
+
+message YoloPacket {
+  uint64 frame_id = 1;
+  uint64 timestamp_ms = 2;
+  bytes jpeg_bytes = 3;
+  repeated Detection detections = 4;
+}
+
+enum GraphLabel {
+  ZONE_LEFT = 0;
+  ZONE_MIDDLE = 1;
+  ZONE_RIGHT = 2;
+}
+
+message GraphValue {
+  GraphLabel name = 1;
+  float value = 2;
+}
+
+message GraphPacket {
+  uint64 frame_id = 1;
+  repeated GraphValue graphs = 2;
+}
+
+message Packet {
+  oneof payload {
+    YoloPacket yolo = 1;
+    GraphPacket graph = 2;
+  }
+}
+

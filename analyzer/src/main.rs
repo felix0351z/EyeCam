@@ -11,15 +11,12 @@ pub const APP_NAME: &'static str = "EyeCam Analyzer";
 
 fn main() {
 
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([1920.0, 1080.0]),
-        ..Default::default()
-    };
+    //TODO: Struktur reinbringen, vtl. nochmal von mvvm zu etwas anderem wechseln.
+    //TODO: ChatGPT wegen der bildübertragung fragen hinzu bevy/egui
 
-    eframe::run_native(APP_NAME, options, Box::new(|creation_context| {
-        creation_context.egui_ctx.set_theme(egui::Theme::Dark);
-        Ok(Box::<view::AnalyzerView>::default())
-    })).expect("Failed to run app");
+    //TODO: 1. Empfangen Bilddaten - Schnittstelle implementieren => TCP mit Packet JPD Codierung für beste performance probiern
+    //TODO: 2. Daten verarbeiten - Boxen zeichnen etc.
+    //TODO: 3. Darstellen in egui. Bild wird gezeichnet, boxen obendrauf mit bevy (nicht in bild)
 
     App::new()
         .add_plugins(DefaultPlugins)
