@@ -5,11 +5,13 @@ use egui::{LayerId, Ui, UiBuilder};
 
 mod view;
 mod viewmodel;
-mod reader;
+mod backend;
 
 pub const APP_NAME: &'static str = "EyeCam Analyzer";
 
 fn main() {
+    
+    
 
     //TODO: Struktur reinbringen, vtl. nochmal von mvvm zu etwas anderem wechseln.
     //TODO: ChatGPT wegen der bildübertragung fragen hinzu bevy/egui

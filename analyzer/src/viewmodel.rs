@@ -1,11 +1,11 @@
-use crate::reader::{packets::Packet, spawn_eyecam_reader};
+use crate::backend::{packets::Packet, spawn_eyecam_reader};
 use egui_plot::PlotPoints;
 use std::collections::VecDeque;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::time::Instant;
-use crate::reader::packets::packet::Payload;
-use crate::reader::packets::{GraphLabel, GraphPacket, YoloPacket};
+use crate::backend::packets::packet::Payload;
+use crate::backend::packets::{GraphLabel, GraphPacket, YoloPacket};
 
 pub struct AnalyzerViewModel {
     rx: Receiver<Packet>,
