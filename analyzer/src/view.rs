@@ -1,86 +1,91 @@
-use crate::viewmodel::AnalyzerViewModel;
+use bevy::prelude::*;
+use bevy_egui::EguiContexts;
 use egui::Ui;
-use egui_plot::{Line, Plot};
-use std::time::Duration;
 
-pub struct AnalyzerView {
-    vm: AnalyzerViewModel
+#[derive(Resource)]
+pub struct ViewRects {
+    view2d: egui::Rect,
+    view3d: egui::Rect
 }
 
-/// Create the view
-/// This is the entrypoint for the app in main.rs
-impl Default for AnalyzerView {
-
+impl Default for ViewRects {
     fn default() -> Self {
-        Self { vm: AnalyzerViewModel::new() }
+        ViewRects {
+            view2d: egui::Rect::ZERO,
+            view3d: egui::Rect::ZERO,
+        }
     }
+}
 
+#[derive(Component)]
+pub struct View2dCamera;
+
+#[derive(Component)]
+pub struct View3dCamera;
+
+#[derive(Resource)]
+pub struct PlotData {
+    values: Vec<[f64; 2]>,
+}
+
+impl Default for PlotData {
+    fn default() -> Self {
+        let values = (0..200).map(|i| {
+            let x = i as f64 * 0.05;
+            [x, x.sin()]
+        });
+        Self { values: values.collect() }
+    }
 }
 
 
+pub fn ui_layout(
+    mut contexts: EguiContexts,
+    mut rects: ResMut<ViewRects>,
+    plot: Res<PlotData>,
+) -> Result {
+    let ctx = contexts.ctx_mut()?;
 
-/// All UI Panels
-impl AnalyzerView {
+    // Root-UI erzeugen
+    let mut root_ui = egui::Ui::new(
+        ctx.clone(),
+        "root_ui".into(),
+        egui::UiBuilder::new()
+            .layer_id(egui::LayerId::background())
+            .max_rect(ctx.viewport_rect()),
+    );
 
-    pub fn ui_bevy(&mut self, ui: &mut Ui) {
-        self.show_plot(ui)
-    }
+    let half_width = root_ui.available_width() * 0.5;
 
+    // Rechte Seite ohne eigenen Hintergrund, damit die 3D-Ansicht durchscheint.
+    egui::Panel::right("rechts")
+        .resizable(true)
+        .default_size(half_width)
+        .frame(egui::Frame::NONE) // ältere egui: egui::Frame::none()
+        .show(&mut root_ui, |ui| {
+            egui::Panel::top("plot")
+                .resizable(true)
+                .default_size(ui.available_height() * 0.5)
+                .show(ui, |ui| plot_view(ui, &plot));
 
-    fn show_plot(&mut self, ui: &mut Ui) {
-        let max = self.vm.max_points;
-        let points = self.vm.fetch_data();
-
-        egui::CentralPanel::default().show(ui, |ui| {
-            let available_height = ui.available_height();
-            let plot_height = available_height / 3.0;
-
-
-            // Left
-            ui.heading("Zone Left");
-            Self::new_plot("left", max)
-                .height(plot_height)
-                .show(ui, |plot_ui| {
-                    plot_ui.line(Line::new("a", points[0].points()))
-                });
-
-
-            // Middle
-            ui.heading("Zone Middle");
-            Self::new_plot("middle", max)
-                .height(plot_height)
-                .show(ui, |plot_ui| {
-                    plot_ui.line(Line::new("b", points[1].points()))
-                });
-
-
-            //Right
-            ui.heading("Zone Right");
-            Self::new_plot("right", max)
-                .height(plot_height)
-                .show(ui, |plot_ui| {
-                    plot_ui.line(Line::new("c", points[2].points()))
-                });
-
+            // Was im rechten Panel übrig bleibt, gehört der 3D-Ansicht.
+            rects.view3d = ui.available_rect_before_wrap();
         });
 
-        ui.request_repaint_after(Duration::from_millis(50));
-    }
+    // Kein CentralPanel: der Rest des Fensters gehört der 2D-Ansicht.
+    rects.view2d = root_ui.available_rect_before_wrap();
+    Ok(())
+}
 
-pub fn new_plot<'a>(id_source: impl egui::AsId, n_x: usize) -> Plot<'a> {
-    Plot::new(id_source)
-        //.view_aspect(2.0)
-        .include_y(1.0)
-        .include_y(0.0)
-        .include_x(0.0)
-        .include_x(n_x as f64)
+fn plot_view(ui: &mut Ui, data: &PlotData) {
+
+    let points: egui_plot::PlotPoints = data.values.iter().copied().collect();
+
+    egui_plot::Plot::new("messwerte").show(ui, |plot_ui| {
+        plot_ui.line(egui_plot::Line::new("Messwerte", points));
+    });
 }
 
 
 
 
-
-
-
-
-}

@@ -65,7 +65,7 @@ pub mod protocol {
 
 /// Error-Typ, falls keine Payload mit dem Packet übertragen wird.
 #[derive(Debug, Clone)]
-struct NoPayloadError;
+pub struct NoPayloadError;
 
 impl std::fmt::Display for NoPayloadError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
