@@ -15,8 +15,10 @@ zune-jpeg = "0.5.15"
 serde = { version = "1.0.228", features = ["derive"] }
 crossbeam-channel = "0.5.17"
 
-# `zune-jpeg` package will be always built with optimizations
-[profile.dev.package.zune-jpeg]
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
 opt-level = 3
 
 
