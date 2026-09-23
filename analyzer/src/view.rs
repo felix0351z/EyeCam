@@ -4,8 +4,8 @@ use egui::Ui;
 
 #[derive(Resource)]
 pub struct ViewRects {
-    view2d: egui::Rect,
-    view3d: egui::Rect
+    pub view2d: egui::Rect,
+    pub view3d: egui::Rect
 }
 
 impl Default for ViewRects {
