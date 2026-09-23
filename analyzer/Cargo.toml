@@ -13,6 +13,7 @@ bevy_egui = "0.42.0"
 prost = "0.14.4"
 zune-jpeg = "0.5.15"
 serde = { version = "1.0.228", features = ["derive"] }
+crossbeam-channel = "0.5.17"
 
 # `zune-jpeg` package will be always built with optimizations
 [profile.dev.package.zune-jpeg]

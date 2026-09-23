@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::io::{BufReader, Read};
 use std::net::{TcpListener, TcpStream};
-use std::sync::mpsc::Sender;
+use crossbeam_channel::Sender;
 use prost::Message;
 use zune_jpeg::JpegDecoder;
 use zune_jpeg::zune_core::bytestream::ZCursor;
