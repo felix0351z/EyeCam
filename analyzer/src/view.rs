@@ -1,59 +1,41 @@
+pub mod camera;
+
 use bevy::camera::Viewport;
 use bevy::prelude::*;
 use bevy_egui::EguiContexts;
 use crossbeam_channel::Receiver;
 use crate::backend::protocol;
 
+/// Crossbeam-Receiver, von welchem neue Message-Pakete kommen
+#[derive(Resource)]
+pub struct MessageReceiver(pub Receiver<protocol::Message>);
+
+
 /// Ressource, welche die Rects für die Bevy-Views beinhaltet.
 /// Bevy nutzt diese egui-Rects und zeichnet seinen Inhalt hinein.
 #[derive(Resource)]
 pub struct ViewRects {
     pub view_camera: egui::Rect,
-    //pub view3d: egui::Rect
+    //pub view_sensor: egui::Rect
 }
 
 impl Default for ViewRects {
     fn default() -> Self {
         ViewRects {
             view_camera: egui::Rect::ZERO,
-            //view3d: egui::Rect::ZERO,
+            //view_sensor: egui::Rect::ZERO,
         }
     }
 }
 
-#[derive(Resource)]
-pub struct CameraReceiver(pub Receiver<protocol::Message>);
-
-
+/// Bevy-Kameraobjekt, welches auf das passende Viewport im Fenster zeigt.
 #[derive(Component)]
-pub struct ViewEyecamCamera;
+pub struct CameraForViewCamera;
 
-
-
-/*
-#[derive(Component)]
-pub struct View3dCamera;
-
-#[derive(Resource)]
-pub struct PlotData {
-    values: Vec<[f64; 2]>,
-}
-
-impl Default for PlotData {
-    fn default() -> Self {
-        let values = (0..200).map(|i| {
-            let x = i as f64 * 0.05;
-            [x, x.sin()]
-        });
-        Self { values: values.collect() }
-    }
-}
-*/
 
 pub fn ui_layout(
     mut contexts: EguiContexts,
     mut rects: ResMut<ViewRects>,
-    //plot: Res<PlotData>,
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
 
@@ -71,10 +53,9 @@ pub fn ui_layout(
         .frame(egui::Frame::window(root_ui.style()))
         .show(&mut root_ui, |ui| {
 
+            
             let rect = ui.available_rect_before_wrap();
             ui.allocate_rect(rect, egui::Sense::hover());
-
-            //rects.view3d = ui.available_rect_before_wrap();
         });
 
 
@@ -85,10 +66,13 @@ pub fn ui_layout(
         .default_size(half_width)
         .frame(egui::Frame::NONE)
         .show(&mut root_ui, |ui| {
+            
             let rect = ui.available_rect_before_wrap();
             ui.allocate_rect(rect, egui::Sense::hover());
         });
 
+    // Nehme den Inhalt der verbleibenden linken Seite,
+    // und erstelle daraus ein Rect.
 
     rects.view_camera = root_ui.available_rect_before_wrap();
     // rects.view3d = root_ui.available_rect_before_wrap();
@@ -97,29 +81,17 @@ pub fn ui_layout(
     Ok(())
 }
 
-/*
-fn plot_view(ui: &mut Ui, data: &PlotData) {
-
-    let points: egui_plot::PlotPoints = data.values.iter().copied().collect();
-
-    egui_plot::Plot::new("messwerte").show(ui, |plot_ui| {
-        plot_ui.line(egui_plot::Line::new("Messwerte", points));
-    });
-}*/
-
-
+/// Rechne die egui-Rects in Viewports um.  
 pub fn update_viewports(
     mut contexts: EguiContexts,
     rects: Res<ViewRects>,
     window: Single<&Window>,
-    mut cam2d: Single<&mut Camera, With<ViewEyecamCamera>>,
-    //mut cam3d: Single<&mut Camera, (With<View3dCamera>, Without<View2dCamera>)>,
+    mut view_camera: Single<&mut Camera, With<CameraForViewCamera>>,
 ) -> Result {
     let ppp = contexts.ctx_mut()?.pixels_per_point();
     let window_size = window.physical_size();
 
-    cam2d.viewport = to_viewport(rects.view_camera, ppp, window_size);
-    //cam3d.viewport = to_viewport(rects.view3d, ppp, window_size);
+    view_camera.viewport = to_viewport(rects.view_camera, ppp, window_size);
     Ok(())
 }
 
@@ -135,7 +107,3 @@ fn to_viewport(rect: egui::Rect, ppp: f32, window_size: UVec2) -> Option<Viewpor
         ..default()
     })
 }
-
-
-
-

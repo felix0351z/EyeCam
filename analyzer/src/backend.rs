@@ -150,10 +150,15 @@ fn decode_jpeg(jpeg_bytes: Vec<u8>) -> protocol::Jpeg {
     let (width, height) = decoder.dimensions()
         .expect("No dimensions");
 
-    let data = decoder.decode()
+    let rgb = decoder.decode()
         .expect("Failed to decode Jpeg");
 
-    protocol::Jpeg {data, width, height}
+    let rgba: Vec<u8> = rgb
+        .chunks_exact(3)
+        .flat_map(|p| [p[0], p[1], p[2], 255])
+        .collect();
+
+    protocol::Jpeg {data: rgba, width, height}
 }
 
 /// Lese ein Packet von dem TCP Stream
@@ -180,10 +185,10 @@ fn read_packet_from_buffer(
 }
 
 /// Spawn a new thread to receive data from the EyeCam-Device
-pub fn spawn_eyecam_reader(tx: Sender<protocol::Message>) {
+pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>) {
     std::thread::spawn(move || {
 
-        let listener = TcpListener::bind("127.0.0.1:6969").expect("Unable to bind TCP listener");
+        let listener = TcpListener::bind("192.168.178.100:6969").expect("Unable to bind TCP listener");
         for stream in listener.incoming() {
             // Get the stream and open a new buffer reader
             let stream = stream.unwrap();
@@ -197,7 +202,9 @@ pub fn spawn_eyecam_reader(tx: Sender<protocol::Message>) {
                     Ok(packet) => {
                         // Send a new message through the channel if a payload is available.
                         if let Some(msg) = packet.try_into().ok() {
-                            tx.send(msg).unwrap();
+                            if tx.send(msg).is_err() {
+                                break;
+                            }
                         }
                     },
                     Err(error) => {
