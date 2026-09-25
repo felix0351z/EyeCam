@@ -5,7 +5,7 @@ from picamera2 import Picamera2
 from sender import Sender
 from yolo.model import YoloV5, pre_process, YoloV26
 
-MODEL_PATH = "<Model Path>"
+MODEL_PATH = "/home/eyecam/Documents/yolo26n_ncnn_model"
 
 picam2 = Picamera2()
 picam2.preview_configuration.main.size = (640, 640)

@@ -32,6 +32,9 @@ class Sender:
 
 
     def send_yolo_packet(self, data: YOLOOutput):
+        if self.closed:
+            return
+
         packet = packets_pb2.Packet(
             yolo=packets_pb2.YoloPacket(
                 frame_id=0,
