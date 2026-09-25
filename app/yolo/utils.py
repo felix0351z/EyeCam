@@ -49,7 +49,7 @@ def nms(data: YOLOOutput, score_threshold: float, nms_threshold: float = 0.45):
         score_threshold=score_threshold, nms_threshold=nms_threshold
     )
 
-    indices = np.array(indices)
+    indices = np.array(indices).astype(int)
 
     left = data.boxes[indices, 0]
     top = data.boxes[indices, 1]

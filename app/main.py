@@ -3,7 +3,7 @@ import time
 from picamera2 import Picamera2
 
 from sender import Sender
-from yolo.model import YoloV26, pre_process
+from yolo.model import YoloV5, pre_process, YoloV26
 
 MODEL_PATH = "<Model Path>"
 

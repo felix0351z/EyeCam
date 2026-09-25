@@ -49,7 +49,7 @@ class YoloModel(abc.ABC):
         pass
 
 
-class YoloV26(YoloModel):
+class YoloV5(YoloModel):
 
     def __init__(self, model_folder: str):
         super().__init__(model_folder)
@@ -78,7 +78,7 @@ class YoloV26(YoloModel):
 
 
 
-class YOLOv8Processor(YoloModel):
+class YoloV26(YoloModel):
 
     def __init__(self, model_folder: str):
         super().__init__(model_folder)
