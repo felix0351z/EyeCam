@@ -1,7 +1,7 @@
 import abc
 import numpy as np
 import ncnn
-from yolo.interfaces import YOLOInput, LetterboxTransform, YOLOOutput
+from yolo.classes import YOLOInput, LetterboxTransform, YOLOOutput
 from yolo.utils import letterbox, resize_boxes_central_coordinates, nms
 
 THRESHOLD = 0.5
