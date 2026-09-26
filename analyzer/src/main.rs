@@ -15,7 +15,11 @@ fn main() {
 
         .add_systems(Startup, (setup_egui, setup_receiver, view::camera::setup_camera))
         .add_systems(EguiPrimaryContextPass, (view::ui_layout, view::update_viewports))
-        .add_systems(Update, (view::receive_messages, view::camera::render, view::camera::render_boxes).chain())
+        .add_systems(Update, (view::receive_messages, 
+                              view::camera::render, 
+                              view::camera::render_boxes, 
+                              view::camera::render_text).chain()
+        )
         .run();
 }
 

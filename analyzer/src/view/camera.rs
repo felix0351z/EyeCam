@@ -1,18 +1,35 @@
+use crate::view::LatestYoloMessage;
 use bevy::asset::{Assets, Handle, RenderAssetUsages};
 use bevy::color::palettes::css::RED;
 use bevy::image::Image;
 use bevy::math::{Isometry2d, Rect};
-use bevy::prelude::{Commands, DefaultGizmoConfigGroup, GizmoConfigStore, Gizmos, GlobalTransform, Query, Res, ResMut, Resource, Sprite, Vec2};
+use bevy::prelude::FontSize::Px;
+use bevy::prelude::{Commands, Component, DefaultGizmoConfigGroup, Entity, GizmoConfigStore, Gizmos, GlobalTransform, Query, Res, ResMut, Resource, Sprite, Text2d, TextColor, TextFont, Transform, Vec2, With};
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use crate::view::LatestYoloMessage;
+use bevy::sprite::Anchor;
+use bevy::utils::default;
+use std::fs;
+
+/// Marker, um die Labels wiederzufinden
+#[derive(Component)]
+pub struct BoxLabel;
+
+pub struct YoloDetection {
+    pub rect: Rect,
+    pub confidence: f32,
+    pub class_id: i32
+}
+
 
 /// EyeCam Kamera-Bild, welches bei jedem Frame aktualisiert wird.
 #[derive(Resource)]
 pub struct LiveImage {
     pub handle: Handle<Image>,
-    /// Erkannte Boxen in Bildpixeln (Ursprung oben links, y nach unten)
-    pub boxes: Vec<Rect>
+    pub detections: Vec<YoloDetection>,
 }
+
+#[derive(Resource)]
+pub struct ClassNames(pub Vec<String>);
 
 
 /// Rechne Box-Koordinaten von dem Python-Sender in das Bevy-Koordinatensystem um.
@@ -58,11 +75,16 @@ pub fn setup_camera(
     // Erstelle die Sprite-Ansicht und übergebe ihm einen Handle
     commands.spawn(Sprite::from_image(handle.clone()));
 
+    // Coco Names einlesen
+    let coco_names = fs::read_to_string("assets/coco.names")
+        .expect("coco.names nicht gefunden!")
+        .lines()
+        .map(String::from)
+        .collect::<Vec<String>>();
+    commands.insert_resource(ClassNames(coco_names));
+
     // Erstelle ein LiveImage, über welches dann das Bild geupdated werden kann.
-    commands.insert_resource(LiveImage {
-        handle,
-        boxes: Vec::new(),
-    });
+    commands.insert_resource(LiveImage { handle, detections: Vec::new() });
 
     // Konfiguriere die Breite der Gizmos-Boxen
     let (config, _) = gizmos_config.config_mut::<DefaultGizmoConfigGroup>();
@@ -88,9 +110,11 @@ pub fn render_boxes(
             continue;
         }
 
-        for rect in &live_image.boxes {
-            let a = image_to_world(rect.min, image_size, sprite, transform);
-            let b = image_to_world(rect.max, image_size, sprite, transform);
+        for detection in &live_image.detections {
+
+            // Render Boxes
+            let a = image_to_world(detection.rect.min, image_size, sprite, transform);
+            let b = image_to_world(detection.rect.max, image_size, sprite, transform);
 
             let world = Rect::from_corners(a, b);
             gizmos.rect_2d(
@@ -98,6 +122,51 @@ pub fn render_boxes(
                 world.size(),
                 RED
             );
+        }
+    }
+}
+
+pub fn render_text(
+    mut commands: Commands,
+    live_image: Res<LiveImage>,
+    images: Res<Assets<Image>>,
+    class_names: Res<ClassNames>,
+    sprites: Query<(&Sprite, &GlobalTransform)>,
+    labels: Query<Entity, With<BoxLabel>>,
+) {
+    for entity in &labels {
+        commands.entity(entity).despawn();
+    }
+
+    let Some(image) = images.get(&live_image.handle) else {
+        return
+    };
+    let image_size = image.size_f32();
+
+    for (sprite, transform) in &sprites {
+        // Nur das Sprite, das dein Live-Bild anzeigt
+        if sprite.image != live_image.handle {
+            continue;
+        }
+
+        for detection in &live_image.detections {
+            let a = image_to_world(detection.rect.min, image_size, sprite, transform);
+
+            // Render text
+            let class_name = class_names.0
+                .get(detection.class_id as usize)
+                .map(String::as_str)
+                .unwrap_or("?");
+
+            commands.spawn((
+                BoxLabel,
+                Text2d::new(format!("{class_name} {:.0}%", detection.confidence * 100.0)),
+                TextFont { font_size: Px(16.0), ..default() },
+                TextColor(RED.into()),
+                Anchor::BOTTOM_LEFT,
+                Transform::from_translation(a.extend(1.0)),
+            ));
+
         }
     }
 }
@@ -135,9 +204,15 @@ pub fn render(
         );
     }
 
-    // Das abgeflachte Array hat 4 Box-Koordinaten pro Box: x1, y1, x2, y2 (Bildpixel)
-    live_image.boxes = yolo.boxes
-        .chunks_exact(4)
-        .map(|b| Rect::from_corners(Vec2::new(b[0], b[1]), Vec2::new(b[2], b[3])))
+    live_image.detections = yolo.boxes.chunks_exact(4)
+        .zip(yolo.confidences)
+        .zip(yolo.class_ids)
+        .map(|((b, confidence), class_id)| {
+            YoloDetection {
+                rect: Rect::from_corners(Vec2::new(b[0], b[1]), Vec2::new(b[2], b[3])),
+                confidence,
+                class_id,
+            }
+        })
         .collect();
 }
