@@ -10,6 +10,24 @@ use crate::backend::protocol;
 #[derive(Resource)]
 pub struct MessageReceiver(pub Receiver<protocol::Message>);
 
+/// Neueste, noch nicht verarbeitete Yolo-Nachricht.
+/// Wird von `receive_messages` befüllt und vom Konsumenten per `take()` geleert.
+#[derive(Resource, Default)]
+pub struct LatestYoloMessage(pub Option<protocol::YoloMessage>);
+
+/// Leert den Channel komplett und merkt sich pro Nachrichtentyp nur die neueste Nachricht.
+pub fn receive_messages(
+    receiver: Res<MessageReceiver>,
+    mut latest_yolo: ResMut<LatestYoloMessage>,
+) {
+    for message in receiver.0.try_iter() {
+        match message {
+            protocol::Message::Yolo(yolo) => latest_yolo.0 = Some(yolo),
+            protocol::Message::Graph(_) => {}
+        }
+    }
+}
+
 
 /// Ressource, welche die Rects für die Bevy-Views beinhaltet.
 /// Bevy nutzt diese egui-Rects und zeichnet seinen Inhalt hinein.

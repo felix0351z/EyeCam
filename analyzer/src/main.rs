@@ -10,11 +10,12 @@ fn main() {
     App::new()
         .add_plugins((DefaultPlugins, EguiPlugin::default()))
         .init_resource::<view::ViewRects>()
+        .init_resource::<view::LatestYoloMessage>()
         //.init_resource::<view::PlotData>()
 
         .add_systems(Startup, (setup_egui, setup_receiver, view::camera::setup_camera))
         .add_systems(EguiPrimaryContextPass, (view::ui_layout, view::update_viewports))
-        .add_systems(Update, view::camera::render)
+        .add_systems(Update, (view::receive_messages, view::camera::render, view::camera::render_boxes).chain())
         .run();
 }
 
