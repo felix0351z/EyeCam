@@ -29,7 +29,7 @@ pub mod protocol {
         pub timestamp_ms: u64,
         pub jpeg: Jpeg,
         pub confidences: Vec<f32>,
-        pub class_ids: Vec<u32>,
+        pub class_ids: Vec<i32>,
         // 2-D Array [N; 4] für x1, y1, x2, y2
         pub boxes: Vec<f32>
     }
@@ -83,6 +83,20 @@ impl From<api::GraphPacket> for GraphMessage {
         }
     }
 }
+
+fn to_f32(b: &[u8]) -> Vec<f32> {
+    b.chunks_exact(4)
+        .map(|c|
+            f32::from_le_bytes(c.try_into().unwrap()))
+        .collect()
+}
+
+fn to_i32(b: &[u8]) -> Vec<i32> {
+    b.chunks_exact(4)
+        .map(|c| i32::from_le_bytes(c.try_into().unwrap()))
+        .collect()
+}
+
 impl From<api::YoloPacket> for YoloMessage {
 
     fn from(value: api::YoloPacket) -> Self {
@@ -93,9 +107,9 @@ impl From<api::YoloPacket> for YoloMessage {
             frame_id: value.frame_id,
             timestamp_ms: value.timestamp_ms,
             jpeg,
-            confidences: value.confidences,
-            class_ids: value.class_ids,
-            boxes: value.boxes
+            confidences: to_f32(&value.confidences),
+            class_ids: to_i32(&value.class_ids),
+            boxes: to_f32(&value.boxes)
         }
     }
 
