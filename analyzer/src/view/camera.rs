@@ -1,36 +1,81 @@
-use crate::view::LatestYoloMessage;
-use bevy::asset::{Assets, Handle, RenderAssetUsages};
+use bevy::prelude::*;
+use std::fs;
+use bevy::asset::RenderAssetUsages;
 use bevy::color::palettes::css::RED;
-use bevy::image::Image;
-use bevy::math::{Isometry2d, Rect};
 use bevy::prelude::FontSize::Px;
-use bevy::prelude::{Commands, Component, DefaultGizmoConfigGroup, Entity, GizmoConfigStore, Gizmos, GlobalTransform, Query, Res, ResMut, Resource, Sprite, Text2d, TextColor, TextFont, Transform, Vec2, With};
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::sprite::Anchor;
-use bevy::utils::default;
-use std::fs;
+use crate::receiver::{LatestYoloMessage, ReceiveSet};
 
-/// Marker, um die Labels wiederzufinden
+// --------------------------------------
+// Plugin Setup
+// --------------------------------------
+pub struct CameraViewPlugin;
+impl Plugin for CameraViewPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(Startup, setup)
+            .add_systems(Update, (
+                update_live_image,
+                update_boxes,
+                update_label.run_if(resource_changed::<LiveImage>)
+            ).chain().after(ReceiveSet));
+    }
+}
+
+// --------------------------------------
+// Ressourcen
+// --------------------------------------
+
+/// Aktuelles Kamerabild von der EyeCam
+///
+/// Das Live-Image wird in `render` aktualisiert.
+/// Außerdem enthält das Objekt alle Yolo-Detections, welche zu dem aktuellen Bild gehören.
+/// Diese werden von `render_label` und `render_boxes` dargestellt.
+#[derive(Resource)]
+struct LiveImage {
+    handle: Handle<Image>,
+    detections: Vec<YoloDetection>,
+}
+
+struct YoloDetection {
+    rect: Rect,
+    confidence: f32,
+    class_id: i32
+}
+
+/// Die aktuellen Klassennamen aus der coco.names-Datei.
+/// Wird in `setup` initialisiert.
+#[derive(Resource)]
+struct ClassNames(Vec<String>);
+
+// --------------------------------------
+// Komponenten
+// --------------------------------------
+
+
+/// Marker-Objekt
+/// um die Labels oberhalb der Boxen wiederzufinden.
+///
+/// Die Labels werden mit dem Marker gespawned
+/// und können daher dann mit Query<Entity, With<BoxLabel>> wieder gefunden werden.
 #[derive(Component)]
-pub struct BoxLabel;
-
-pub struct YoloDetection {
-    pub rect: Rect,
-    pub confidence: f32,
-    pub class_id: i32
-}
+struct BoxLabel;
 
 
-/// EyeCam Kamera-Bild, welches bei jedem Frame aktualisiert wird.
-#[derive(Resource)]
-pub struct LiveImage {
-    pub handle: Handle<Image>,
-    pub detections: Vec<YoloDetection>,
-}
+/// Marker-Objekt
+/// für den einfachen Zugriff auf das aktuelle Sprite
+///
+/// Dieser Marker wird dafür in `setup` zusammen dem Sprite gespawned.
+/// Beide haben so dieselbe Entity.
+/// Das Holen des Sprites geht dann einfach via Single<&Sprite, With<LiveImageSprite>>
+#[derive(Component)]
+struct LiveImageSprite;
 
-#[derive(Resource)]
-pub struct ClassNames(pub Vec<String>);
 
+// --------------------------------------
+// Systeme & Hilfsfunktionen
+// --------------------------------------
 
 /// Rechne Box-Koordinaten von dem Python-Sender in das Bevy-Koordinatensystem um.
 ///
@@ -53,13 +98,17 @@ fn image_to_world(p: Vec2, image_size: Vec2, sprite: &Sprite, transform: &Global
 }
 
 
-
-/// Erstelle das Bild und bereite die Ansicht vor
-pub fn setup_camera(
+/// Bereite die Kameraansicht vor.
+///
+/// Am Anfang wird das Sprite (Bild) gespawned sowie alle nötigen
+/// Ressourcen und Komponenten initialisiert.
+fn setup(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>, // Zentraler Bildspeicher von Bevy,
     mut gizmos_config: ResMut<GizmoConfigStore>
 ) {
+
+    // 1. Erstelle das Sprite (Bild in Bevy), sowie das zugehörige Handle.
 
     let image = Image::new(
         Extent3d { width: 1, height: 1, depth_or_array_layers: 1 },
@@ -69,127 +118,116 @@ pub fn setup_camera(
         RenderAssetUsages::default(),
     );
 
-    // Erstelle ein neues Handle für das Bild
     let handle = images.add(image);
+    commands.spawn((Sprite::from_image(handle.clone()), LiveImageSprite));
 
-    // Erstelle die Sprite-Ansicht und übergebe ihm einen Handle
-    commands.spawn(Sprite::from_image(handle.clone()));
-
-    // Coco Names einlesen
-    let coco_names = fs::read_to_string("assets/coco.names")
-        .expect("coco.names nicht gefunden!")
-        .lines()
-        .map(String::from)
-        .collect::<Vec<String>>();
-    commands.insert_resource(ClassNames(coco_names));
-
-    // Erstelle ein LiveImage, über welches dann das Bild geupdated werden kann.
+    // 2. Erstelle ein 'LiveImage' Objekt,
+    // über welches das aktuelle Sprite aktualisiert werden kann.
     commands.insert_resource(LiveImage { handle, detections: Vec::new() });
 
-    // Konfiguriere die Breite der Gizmos-Boxen
+
+    // 3. Lese die Klassennamen aus coco.names ein
+    let coco_names = fs::read_to_string("assets/coco.names")
+        .map(|it| it.lines().map(String::from).collect())
+        .unwrap_or_else(|e| {
+            warn!("coco.names konnten nicht eingelesen werden: {e}");
+            Vec::new()
+        });
+
+    commands.insert_resource(ClassNames(coco_names));
+
+
+    // 4. Konfiguriere die Breite der Gizmos-Boxen
     let (config, _) = gizmos_config.config_mut::<DefaultGizmoConfigGroup>();
     config.line.width = 3.0;
-
 }
 
-pub fn render_boxes(
+/// Aktualisiere die Boxen aus dem `LiveImage` als Gizmos.
+fn update_boxes(
     mut gizmos: Gizmos,
     live_image: Res<LiveImage>,
     images: Res<Assets<Image>>,
-    sprites: Query<(&Sprite, &GlobalTransform)>,
+    live_sprite: Single<(&Sprite, &GlobalTransform), With<LiveImageSprite>>,
 ) {
-    let Some(image) = images.get(&live_image.handle) else {
-        return
-    };
+    let (sprite, transform) = *live_sprite;
 
+    let Some(image) = images.get(&live_image.handle) else { return };
     let image_size = image.size_f32();
 
-    for (sprite, transform) in &sprites {
-        // Nur das Sprite, das dein Live-Bild anzeigt
-        if sprite.image != live_image.handle {
-            continue;
-        }
+    for detection in &live_image.detections {
+        // Render Boxes
+        let a = image_to_world(detection.rect.min, image_size, sprite, transform);
+        let b = image_to_world(detection.rect.max, image_size, sprite, transform);
 
-        for detection in &live_image.detections {
-
-            // Render Boxes
-            let a = image_to_world(detection.rect.min, image_size, sprite, transform);
-            let b = image_to_world(detection.rect.max, image_size, sprite, transform);
-
-            let world = Rect::from_corners(a, b);
-            gizmos.rect_2d(
-                Isometry2d::from_translation(world.center()),
-                world.size(),
-                RED
-            );
-        }
+        let world = Rect::from_corners(a, b);
+        gizmos.rect_2d(
+            Isometry2d::from_translation(world.center()),
+            world.size(),
+            RED
+        );
     }
 }
 
-pub fn render_text(
+/// Aktualisiere die Labels oberhalb von den Boxen
+fn update_label(
     mut commands: Commands,
     live_image: Res<LiveImage>,
     images: Res<Assets<Image>>,
     class_names: Res<ClassNames>,
-    sprites: Query<(&Sprite, &GlobalTransform)>,
+    live_sprite: Single<(&Sprite, &GlobalTransform), With<LiveImageSprite>>,
     labels: Query<Entity, With<BoxLabel>>,
 ) {
+    let (sprite, transform) = *live_sprite;
+
+    // Despawne die alten Labels bevor die neuen gespawned werden
     for entity in &labels {
         commands.entity(entity).despawn();
     }
 
-    let Some(image) = images.get(&live_image.handle) else {
-        return
-    };
+    let Some(image) = images.get(&live_image.handle) else { return };
     let image_size = image.size_f32();
 
-    for (sprite, transform) in &sprites {
-        // Nur das Sprite, das dein Live-Bild anzeigt
-        if sprite.image != live_image.handle {
-            continue;
-        }
+    // Spawne Label für jede Detection
+    for detection in &live_image.detections {
+        let a = image_to_world(detection.rect.min, image_size, sprite, transform);
 
-        for detection in &live_image.detections {
-            let a = image_to_world(detection.rect.min, image_size, sprite, transform);
+        // Lade Klassennamen aus Id
+        let class_name = class_names.0
+            .get(detection.class_id as usize)
+            .map(String::as_str)
+            .unwrap_or("?");
 
-            // Render text
-            let class_name = class_names.0
-                .get(detection.class_id as usize)
-                .map(String::as_str)
-                .unwrap_or("?");
-
-            commands.spawn((
-                BoxLabel,
-                Text2d::new(format!("{class_name} {:.0}%", detection.confidence * 100.0)),
-                TextFont { font_size: Px(16.0), ..default() },
-                TextColor(RED.into()),
-                Anchor::BOTTOM_LEFT,
-                Transform::from_translation(a.extend(1.0)),
-            ));
-
-        }
+        // Spawne Label oberhalb der Box
+        commands.spawn((
+            BoxLabel,
+            Text2d::new(format!("{class_name} {:.0}%", detection.confidence * 100.0)),
+            TextFont { font_size: Px(16.0), ..default() },
+            TextColor(RED.into()),
+            Anchor::BOTTOM_LEFT,
+            Transform::from_translation(a.extend(1.0)),
+        ));
     }
 }
 
-
-pub fn render(
+/// Aktualisiere `LiveImage` inklusive Sprite.
+/// Das aktuelle bzw. nächste Frame wird aus `LatestYoloMessage` heraus gelesen.
+fn update_live_image(
     mut latest_yolo: ResMut<LatestYoloMessage>,
     mut live_image: ResMut<LiveImage>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    // Nur verarbeiten, wenn seit dem letzten Frame eine neue Nachricht angekommen ist.
+    // Nur rendern, wenn seit dem letzten Frame eine neue Nachricht angekommen ist.
     let Some(yolo) = latest_yolo.0.take() else { return; };
 
     // Hole das aktuelle Live-Image aus dem Bildspeicher
     let Some(mut image) = images.get_mut(&live_image.handle) else { return; };
 
+    // Aktualisiere das Bild
     let jpeg = yolo.jpeg;
     let size = image.texture_descriptor.size;
 
     let new_width = jpeg.width as u32;
     let new_height = jpeg.height as u32;
-
-
     if size.width == new_width && size.height == new_height {
         // Gleiche Größe, nur Pixel tauschen.
         image.data = Some(jpeg.data);
@@ -204,6 +242,7 @@ pub fn render(
         );
     }
 
+    // Aktualisiere die Detections, also Boxen, Confidences und ClassIds in dem LiveImage
     live_image.detections = yolo.boxes.chunks_exact(4)
         .zip(yolo.confidences)
         .zip(yolo.class_ids)

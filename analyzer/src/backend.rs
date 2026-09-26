@@ -1,20 +1,111 @@
+use crate::backend::protocol::{GraphMessage, GraphValue, YoloMessage};
+use crossbeam_channel::Sender;
+use prost::Message;
 use std::error::Error;
 use std::io::{BufReader, Read};
 use std::net::{TcpListener, TcpStream};
-use crossbeam_channel::Sender;
-use prost::Message;
 use zune_jpeg::JpegDecoder;
 use zune_jpeg::zune_core::bytestream::ZCursor;
-use crate::backend::protocol::{GraphMessage, GraphValue, YoloMessage};
 
-/// Datenstrukturen von der packets.proto Datei importieren.
-/// Diese beinhalten die Kommunikationsstruktur zwischen EyeCam und dem Analyzer.
+// --------------------------------------
+// Einstiegspunkt
+// --------------------------------------
+
+/// Spawne einen neuen Thread um Daten vom EyeCam-Gerät zu empfangen
+pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>) {
+    std::thread::spawn(move || {
+
+        let listener = TcpListener::bind("192.168.178.100:6969").expect("Unable to bind TCP listener");
+        for stream in listener.incoming() {
+            // Get the stream and open a new buffer reader
+            let stream = stream.unwrap();
+            let mut buf_reader = BufReader::new(&stream);
+            println!("Connection established!");
+
+            loop {
+                let packet = read_packet_from_buffer(&mut buf_reader);
+
+                match packet {
+                    Ok(packet) => {
+                        // Send a new message through the channel if a payload is available.
+                        if let Some(msg) = packet.try_into().ok() {
+                            if tx.send(msg).is_err() {
+                                break;
+                            }
+                        }
+                    },
+                    Err(_) => {
+                        eprintln!("Connection closed. Waiting for new connections...");
+                        break;
+                    },
+                }
+            }
+        }
+    });
+}
+
+// --------------------------------------
+// Funktionen
+// --------------------------------------
+
+/// Lese ein Packet von einem Bytestream aus
+fn read_packet_from_buffer(
+    buffer: &mut BufReader<&TcpStream>
+) -> Result<api::Packet, Box<dyn Error>> {
+    // Länge der Paketgröße.
+    // Dieser ist vom Typ u32 und wird daher mit 4 Bytes angegeben.
+    let mut len_buf = [0u8; 4];
+
+    // Lese die Paketgröße
+    buffer.read_exact(&mut len_buf)?;
+    let size = u32::from_be_bytes(len_buf) as usize;
+
+    // Paket lesen und in einem Vec-Buffer zwischenspeichern.
+    let mut packet_buf = vec![0u8; size];
+    buffer.read_exact(&mut packet_buf)?;
+
+    // Packet mit prost deserializen.
+    let packet = api::Packet::decode(&packet_buf[..])?;
+    Ok(packet)
+}
+
+
+/// Dekodiere ein Jpeg-Bild
+fn decode_jpeg(jpeg_bytes: Vec<u8>) -> protocol::Jpeg {
+    let cursor = ZCursor::new(jpeg_bytes);
+    let mut decoder = JpegDecoder::new(cursor);
+
+    decoder.decode_headers()
+        .expect("Failed to decode JPEG headers");
+
+    let (width, height) = decoder.dimensions()
+        .expect("No dimensions");
+
+    let rgb = decoder.decode()
+        .expect("Failed to decode Jpeg");
+
+    // Wandle in RGBA um, da Bevy kein RGB direkt nimmt.
+    let rgba: Vec<u8> = rgb
+        .chunks_exact(3)
+        .flat_map(|p| [p[0], p[1], p[2], 255])
+        .collect();
+
+    protocol::Jpeg {data: rgba, width, height}
+}
+
+// --------------------------------------
+// Protobuf-API & Channel-Protokoll
+// --------------------------------------
+
+/// API zwischen EyeCam und dem Analyzer.
+/// Generiert aus der `packets.proto` Datei.
 mod api {
     include!(concat!(env!("OUT_DIR"), "/packets.rs"));
 }
 
 
-/// Datenstrukturen für die Kommunikation zwischen Backend und Bevy-UI
+/// Protokoll für die Kommunikation zwischen Backend und Bevy-UI
+/// auf dem Crossbeam-Channel
 pub mod protocol {
 
     #[derive(Clone, PartialEq)]
@@ -62,7 +153,7 @@ pub struct NoPayloadError;
 
 impl std::fmt::Display for NoPayloadError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Keine Payload im Packet vorhanden!")
+        write!(f, "Keine Payload im Paket vorhanden!")
     }
 }
 
@@ -131,87 +222,5 @@ impl TryFrom<api::Packet> for protocol::Message {
             }
         }
     }
-}
-
-
-/// Dekodiere ein Bild
-/// Bytes kommen von der API / EyeCam
-fn decode_jpeg(jpeg_bytes: Vec<u8>) -> protocol::Jpeg {
-
-    let cursor = ZCursor::new(jpeg_bytes);
-    let mut decoder = JpegDecoder::new(cursor);
-
-    decoder.decode_headers()
-        .expect("Failed to decode JPEG headers");
-
-    let (width, height) = decoder.dimensions()
-        .expect("No dimensions");
-
-    let rgb = decoder.decode()
-        .expect("Failed to decode Jpeg");
-
-    let rgba: Vec<u8> = rgb
-        .chunks_exact(3)
-        .flat_map(|p| [p[0], p[1], p[2], 255])
-        .collect();
-
-    protocol::Jpeg {data: rgba, width, height}
-}
-
-/// Lese ein Packet von dem TCP Stream
-fn read_packet_from_buffer(
-    buffer: &mut BufReader<&TcpStream>,
-) -> Result<api::Packet, Box<dyn Error>> {
-    // Length of the packet size.
-    // This is an u32 and has therefore exactly 4 bytes.
-    let mut len_buf = [0u8; 4];
-
-    // Read the length of the packet
-    // If not receivable, the connection is closed, so break.
-    buffer.read_exact(&mut len_buf)?;
-    let size = u32::from_be_bytes(len_buf) as usize;
-
-    // Now let's read the packet payload
-    let mut packet_buf = vec![0u8; size];
-    buffer.read_exact(&mut packet_buf)?;
-
-    // Use prost to deserialize the packet
-    let packet = api::Packet::decode(&packet_buf[..])?;
-
-    Ok(packet)
-}
-
-/// Spawn a new thread to receive data from the EyeCam-Device
-pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>) {
-    std::thread::spawn(move || {
-
-        let listener = TcpListener::bind("192.168.178.100:6969").expect("Unable to bind TCP listener");
-        for stream in listener.incoming() {
-            // Get the stream and open a new buffer reader
-            let stream = stream.unwrap();
-            let mut buf_reader = BufReader::new(&stream);
-            println!("Connection established!");
-
-            loop {
-                let packet = read_packet_from_buffer(&mut buf_reader);
-
-                match packet {
-                    Ok(packet) => {
-                        // Send a new message through the channel if a payload is available.
-                        if let Some(msg) = packet.try_into().ok() {
-                            if tx.send(msg).is_err() {
-                                break;
-                            }
-                        }
-                    },
-                    Err(error) => {
-                        eprintln!("Connection failure: {error}, retry in 2s");
-                        break;
-                    },
-                    //TODO: Sleep 2 seconds
-                }
-            }
-        }
-    });
 }
 

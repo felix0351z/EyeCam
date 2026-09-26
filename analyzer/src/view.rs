@@ -2,39 +2,31 @@ pub mod camera;
 
 use bevy::camera::Viewport;
 use bevy::prelude::*;
-use bevy_egui::EguiContexts;
-use crossbeam_channel::Receiver;
-use crate::backend::protocol;
+use bevy_egui::{EguiContexts, EguiGlobalSettings, EguiPrimaryContextPass, PrimaryEguiContext};
 
-/// Crossbeam-Receiver, von welchem neue Message-Pakete kommen
-#[derive(Resource)]
-pub struct MessageReceiver(pub Receiver<protocol::Message>);
-
-/// Neueste, noch nicht verarbeitete Yolo-Nachricht.
-/// Wird von `receive_messages` befüllt und vom Konsumenten per `take()` geleert.
-#[derive(Resource, Default)]
-pub struct LatestYoloMessage(pub Option<protocol::YoloMessage>);
-
-/// Leert den Channel komplett und merkt sich pro Nachrichtentyp nur die neueste Nachricht.
-pub fn receive_messages(
-    receiver: Res<MessageReceiver>,
-    mut latest_yolo: ResMut<LatestYoloMessage>,
-) {
-    for message in receiver.0.try_iter() {
-        match message {
-            protocol::Message::Yolo(yolo) => latest_yolo.0 = Some(yolo),
-            protocol::Message::Graph(_) => {}
-        }
+// --------------------------------------
+// Plugin Setup
+// --------------------------------------
+pub struct ViewPlugin;
+impl Plugin for ViewPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .init_resource::<ViewRects>()
+            .add_systems(Startup, setup)
+            .add_systems(EguiPrimaryContextPass, (ui_layout, update_viewports));
     }
 }
 
+// --------------------------------------
+// Ressourcen und Komponenten
+// --------------------------------------
 
 /// Ressource, welche die Rects für die Bevy-Views beinhaltet.
 /// Bevy nutzt diese egui-Rects und zeichnet seinen Inhalt hinein.
 #[derive(Resource)]
-pub struct ViewRects {
-    pub view_camera: egui::Rect,
-    //pub view_sensor: egui::Rect
+struct ViewRects {
+    view_camera: egui::Rect,
+    //view_sensor: egui::Rect
 }
 
 impl Default for ViewRects {
@@ -46,12 +38,43 @@ impl Default for ViewRects {
     }
 }
 
-/// Bevy-Kameraobjekt, welches auf das passende Viewport im Fenster zeigt.
+/// Bevy-Kamera für die linke Seite des Fensters,
+/// in welchem die EyeCam Camera in `view::camera`. dargestellt werden soll.
 #[derive(Component)]
-pub struct CameraForViewCamera;
+struct CameraForViewCamera;
 
 
-pub fn ui_layout(
+// --------------------------------------
+// Systeme und Hilfsfunktionen
+// --------------------------------------
+
+
+/// Initialisiere das Bevy-Egui System
+/// und erstelle eine Kamera für jede UI-Ansicht.
+fn setup(mut commands: Commands, mut egui_settings: ResMut<EguiGlobalSettings>) {
+    // egui an keine Kamera hängen, da es für diese eigene Viewports gibt.
+    egui_settings.auto_create_primary_context = false;
+
+    // Erstelle eine neue Kamera für view::camera
+    commands.spawn((Camera2d, Camera { order: 0, ..default() }, CameraForViewCamera));
+
+
+    // Erstelle eine neue Kamera für egui.
+    // Wird über das ganze Fenster zuletzt gerendert.
+    commands.spawn((
+        Camera2d,
+        Camera { order: 2, clear_color: ClearColorConfig::None, ..default() },
+        PrimaryEguiContext,
+        bevy::camera::visibility::RenderLayers::none(),
+    ));
+}
+
+/// UI-Layout Aufbau des Analyzers
+///
+/// Die einzelnen Bereiche, in welchen Bevy rendern muss,
+/// werden in `ViewRects` gespeichert und schließlich von `update_viewports`
+/// zu Bevy Viewports übersetzt.
+fn ui_layout(
     mut contexts: EguiContexts,
     mut rects: ResMut<ViewRects>,
 ) -> Result {
@@ -100,7 +123,7 @@ pub fn ui_layout(
 }
 
 /// Rechne die egui-Rects in Viewports um.  
-pub fn update_viewports(
+fn update_viewports(
     mut contexts: EguiContexts,
     rects: Res<ViewRects>,
     window: Single<&Window>,
