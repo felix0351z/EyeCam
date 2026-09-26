@@ -40,7 +40,9 @@ class Sender:
                 frame_id=0,
                 timestamp_ms=int(time.time() * 1000),
                 jpeg_bytes=_encode_jpeg(data.image),
-                detections=[],
+                confidences=np.ascontiguousarray(data.confidences, dtype='<f4').tobytes(),
+                class_ids=np.ascontiguousarray(data.class_ids, dtype='<i4').tobytes(),
+                boxes=np.ascontiguousarray(data.boxes, dtype='<f4').tobytes()
             )
         )
 
