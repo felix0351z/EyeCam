@@ -155,7 +155,6 @@ dependencies = [
  "egui_plot",
  "prost",
  "prost-build",
- "serde",
  "zune-jpeg",
 ]
 
