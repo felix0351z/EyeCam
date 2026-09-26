@@ -59,17 +59,17 @@ pub fn render(
             let jpeg = yolo.jpeg;
             let size = image.texture_descriptor.size;
 
-            let newWidth = jpeg.width as u32;
-            let newHeight = jpeg.height as u32;
+            let new_width = jpeg.width as u32;
+            let new_height = jpeg.height as u32;
 
 
-            if size.width == newWidth && size.height == newHeight {
+            if size.width == new_width && size.height == new_height {
                 // Gleiche Größe: nur die Pixel austauschen.
                 image.data = Some(jpeg.data);
             } else {
                 // Neue Größe: Image neu anlegen (gleicher Handle, Anzeigen bleiben verbunden).
                 *image = Image::new(
-                    Extent3d { width: newWidth, height: newHeight, depth_or_array_layers: 1 },
+                    Extent3d { width: new_width, height: new_height, depth_or_array_layers: 1 },
                     TextureDimension::D2,
                     jpeg.data,
                     TextureFormat::Rgba8UnormSrgb,

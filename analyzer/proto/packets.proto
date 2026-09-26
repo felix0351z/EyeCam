@@ -1,21 +1,13 @@
 syntax = "proto3";
 package packets;
 
-
-message Detection {
-  uint32 class_id = 1;
-  float confidence = 2;
-  float x1 = 3;
-  float y1 = 4;
-  float x2 = 5;
-  float y2 = 6;
-}
-
 message YoloPacket {
   uint64 frame_id = 1;
   uint64 timestamp_ms = 2;
   bytes jpeg_bytes = 3;
-  repeated Detection detections = 4;
+  repeated float confidences = 4;
+  repeated uint32 class_ids = 5;
+  repeated float boxes = 6;
 }
 
 enum GraphLabel {

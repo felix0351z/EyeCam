@@ -5,7 +5,7 @@ use crossbeam_channel::Sender;
 use prost::Message;
 use zune_jpeg::JpegDecoder;
 use zune_jpeg::zune_core::bytestream::ZCursor;
-use crate::backend::protocol::{GraphMessage, GraphValue, YoloDetection, YoloMessage};
+use crate::backend::protocol::{GraphMessage, GraphValue, YoloMessage};
 
 /// Datenstrukturen von der packets.proto Datei importieren.
 /// Diese beinhalten die Kommunikationsstruktur zwischen EyeCam und dem Analyzer.
@@ -28,17 +28,10 @@ pub mod protocol {
         pub frame_id: u64,
         pub timestamp_ms: u64,
         pub jpeg: Jpeg,
-        pub detections: Vec<YoloDetection>
-    }
-
-    #[derive(Copy, Clone, PartialEq)]
-    pub struct YoloDetection {
-        pub class_id: u32,
-        pub confidence: f32,
-        pub x1: f32,
-        pub y1: f32,
-        pub x2: f32,
-        pub y2: f32,
+        pub confidences: Vec<f32>,
+        pub class_ids: Vec<u32>,
+        // 2-D Array [N; 4] für x1, y1, x2, y2
+        pub boxes: Vec<f32>
     }
 
     #[derive(Clone, PartialEq)]
@@ -90,16 +83,6 @@ impl From<api::GraphPacket> for GraphMessage {
         }
     }
 }
-impl From<api::Detection> for YoloDetection {
-    fn from(value: api::Detection) -> Self {
-        YoloDetection {
-            class_id: value.class_id,
-            confidence: value.confidence,
-            x1: value.x1, y1: value.y1,
-            x2: value.x2, y2: value.y2,
-        }
-    }
-}
 impl From<api::YoloPacket> for YoloMessage {
 
     fn from(value: api::YoloPacket) -> Self {
@@ -110,9 +93,9 @@ impl From<api::YoloPacket> for YoloMessage {
             frame_id: value.frame_id,
             timestamp_ms: value.timestamp_ms,
             jpeg,
-            detections: value.detections.into_iter()
-                .map(YoloDetection::from)
-                .collect(),
+            confidences: value.confidences,
+            class_ids: value.class_ids,
+            boxes: value.boxes
         }
     }
 
