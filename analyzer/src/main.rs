@@ -1,21 +1,20 @@
-mod view;
-mod viewmodel;
-mod reader;
+use bevy::DefaultPlugins;
+use bevy::prelude::App;
+use bevy_egui::EguiPlugin;
+use bevy_panorbit_camera::PanOrbitCameraPlugin;
+use crate::receiver::ReceiverPlugin;
+use crate::view::camera::CameraViewPlugin;
+use crate::view::sensor::SensorViewPlugin;
+use crate::view::ViewPlugin;
 
-pub const APP_NAME: &'static str = "EyeCam Analyzer";
+mod view;
+mod backend;
+mod receiver;
 
 fn main() {
-    env_logger::init();
-
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([1920.0, 1080.0]),
-        ..Default::default()
-    };
-
-    eframe::run_native(APP_NAME, options, Box::new(|creation_context| {
-        creation_context.egui_ctx.set_theme(egui::Theme::Dark);
-        Ok(Box::<view::AnalyzerView>::default())
-    })).expect("Failed to run app");
-
-
+    App::new()
+        .add_plugins((DefaultPlugins, EguiPlugin::default(), PanOrbitCameraPlugin))
+        .add_plugins((ReceiverPlugin, ViewPlugin, CameraViewPlugin, SensorViewPlugin))
+        .run();
 }
+
