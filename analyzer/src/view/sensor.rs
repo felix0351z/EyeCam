@@ -1,4 +1,24 @@
+use bevy::prelude::*;
 
+// --------------------------------------
+// Plugin Setup
+// --------------------------------------
+pub struct SensorViewPlugin;
+impl Plugin for SensorViewPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, setup);
+    }
+}
+
+
+fn setup(
+    mut commands: Commands
+
+
+) {
+    commands.spawn((PointLight::default(), Transform::from_xyz(4.0, 8.0, 4.0)));
+
+}
 
 
 // 3D: ein paar Punkte als kleine Kugeln
@@ -13,15 +33,5 @@ for i in 0..50 {
         Transform::from_xyz(t.cos() * 2.0, t * 0.1, t.sin() * 2.0),
     ));
 }
-commands.spawn((PointLight::default(), Transform::from_xyz(4.0, 8.0, 4.0)));
 */
 
-/*
-// 3D-Punkte-Ansicht: darf nicht clearen, sonst wird die 2D-Ansicht übermalt.
-commands.spawn((
-    Camera3d::default(),
-    Camera { order: 1, clear_color: ClearColorConfig::None, ..default() },
-    Transform::from_xyz(4.0, 3.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
-    view::ViewCam3d,
-));
-*/

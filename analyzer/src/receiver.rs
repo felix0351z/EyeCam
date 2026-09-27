@@ -11,6 +11,7 @@ impl Plugin for ReceiverPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<LatestYoloMessage>()
+            .init_resource::<LatestSensorMessage>()
             .add_systems(Startup, setup)
             .add_systems(Update, receive_messages.in_set(ReceiveSet));
     }
@@ -36,6 +37,11 @@ struct MessageReceiver(Receiver<protocol::Message>);
 #[derive(Resource, Default)]
 pub struct LatestYoloMessage(pub Option<protocol::YoloMessage>);
 
+/// Neuste, noch nicht verarbeitete Sensor-Nachricht.
+/// Wird von `receive_messages` befüllt und vom Konsumenten per `take()` geleert.
+#[derive(Resource, Default)]
+pub struct LatestSensorMessage(pub Option<protocol::SensorMessage>);
+
 
 // --------------------------------------
 // Systeme und Hilfsfunktionen
@@ -59,10 +65,12 @@ fn setup(mut commands: Commands) {
 fn receive_messages(
     receiver: Res<MessageReceiver>,
     mut yolo_message: ResMut<LatestYoloMessage>,
+    mut sensor_message: ResMut<LatestSensorMessage>,
 ) {
     for message in receiver.0.try_iter() {
         match message {
             protocol::Message::Yolo(yolo) => yolo_message.0 = Some(yolo),
+            protocol::Message::Sensor(sensor) => sensor_message.0 = Some(sensor),
             protocol::Message::Graph(_) => {}
         }
     }

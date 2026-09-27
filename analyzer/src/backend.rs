@@ -1,4 +1,4 @@
-use crate::backend::protocol::{GraphMessage, GraphValue, YoloMessage};
+use crate::backend::protocol::{GraphMessage, GraphValue, SensorMessage, YoloMessage};
 use crossbeam_channel::Sender;
 use prost::Message;
 use std::error::Error;
@@ -6,7 +6,6 @@ use std::io::{BufReader, Read};
 use std::net::{TcpListener, TcpStream};
 use zune_jpeg::JpegDecoder;
 use zune_jpeg::zune_core::bytestream::ZCursor;
-
 // --------------------------------------
 // Einstiegspunkt
 // --------------------------------------
@@ -111,7 +110,8 @@ pub mod protocol {
     #[derive(Clone, PartialEq)]
     pub enum Message {
         Yolo(YoloMessage),
-        Graph(GraphMessage)
+        Graph(GraphMessage),
+        Sensor(SensorMessage)
     }
 
     #[derive(Clone, PartialEq)]
@@ -123,6 +123,13 @@ pub mod protocol {
         pub class_ids: Vec<i32>,
         // 2-D Array [N; 4] für x1, y1, x2, y2
         pub boxes: Vec<f32>
+    }
+
+    #[derive(Clone, PartialEq)]
+    pub struct SensorMessage {
+        pub distance_mm: Vec<i16>, // in mm
+        pub range_sigma_mm: Vec<u16>, // in mm
+        pub target_status: Vec<u8>, // Statuscode
     }
 
     #[derive(Clone, PartialEq)]
@@ -203,9 +210,25 @@ impl From<api::YoloPacket> for YoloMessage {
             boxes: to_f32(&value.boxes)
         }
     }
-
-
 }
+
+impl From<api::SensorPacket> for SensorMessage {
+    fn from(value: api::SensorPacket) -> Self {
+        SensorMessage {
+            distance_mm: value.distance_mm
+                .chunks_exact(2)
+                .map(|c| i16::from_le_bytes(c.try_into().unwrap()))
+                .collect(),
+            range_sigma_mm: value.range_sigma_mm
+                .chunks_exact(2)
+                .map(|c| u16::from_le_bytes(c.try_into().unwrap()))
+                .collect(),
+            target_status: value.target_status
+        }
+    }
+}
+
+
 impl TryFrom<api::Packet> for protocol::Message {
     type Error = NoPayloadError;
     fn try_from(value: api::Packet) -> Result<Self, Self::Error> {
@@ -219,6 +242,9 @@ impl TryFrom<api::Packet> for protocol::Message {
             }
             api::packet::Payload::Graph(packet) => {
                 Ok(protocol::Message::Graph(GraphMessage::from(packet)))
+            }
+            api::packet::Payload::Sensor(packet) => {
+                Ok(protocol::Message::Sensor(SensorMessage::from(packet)))
             }
         }
     }

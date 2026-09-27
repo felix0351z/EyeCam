@@ -10,6 +10,13 @@ message YoloPacket {
   bytes boxes = 6;
 }
 
+message SensorPacket {
+  bytes distance_mm = 1;
+  bytes target_status = 2;
+  bytes range_sigma_mm = 3;
+}
+
+
 enum GraphLabel {
   ZONE_LEFT = 0;
   ZONE_MIDDLE = 1;
@@ -29,7 +36,8 @@ message GraphPacket {
 message Packet {
   oneof payload {
     YoloPacket yolo = 1;
-    GraphPacket graph = 2;
+    SensorPacket sensor = 2;
+    GraphPacket graph = 3;
   }
 }
 

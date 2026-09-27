@@ -1,4 +1,5 @@
 pub mod camera;
+pub mod sensor;
 
 use bevy::camera::Viewport;
 use bevy::prelude::*;
@@ -26,14 +27,14 @@ impl Plugin for ViewPlugin {
 #[derive(Resource)]
 struct ViewRects {
     view_camera: egui::Rect,
-    //view_sensor: egui::Rect
+    view_sensor: egui::Rect
 }
 
 impl Default for ViewRects {
     fn default() -> Self {
         ViewRects {
             view_camera: egui::Rect::ZERO,
-            //view_sensor: egui::Rect::ZERO,
+            view_sensor: egui::Rect::ZERO,
         }
     }
 }
@@ -42,6 +43,11 @@ impl Default for ViewRects {
 /// in welchem die EyeCam Camera in `view::camera`. dargestellt werden soll.
 #[derive(Component)]
 struct CameraForViewCamera;
+
+/// Bevy-Kamera für die rechte Seite des Fensters,
+/// in welchem der VL53L5CX Sensor in `view::sensor`. dargestellt werden soll.
+#[derive(Component)]
+struct CameraForViewSensor;
 
 
 // --------------------------------------
@@ -58,6 +64,13 @@ fn setup(mut commands: Commands, mut egui_settings: ResMut<EguiGlobalSettings>) 
     // Erstelle eine neue Kamera für view::camera
     commands.spawn((Camera2d, Camera { order: 0, ..default() }, CameraForViewCamera));
 
+    // Erstelle eine neue Kamera für view::sensor
+    commands.spawn((
+        Camera3d::default(),
+        Camera { order: 1, clear_color: ClearColorConfig::None, ..default() },
+        Transform::from_xyz(4.0, 3.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
+        CameraForViewSensor,
+    ));
 
     // Erstelle eine neue Kamera für egui.
     // Wird über das ganze Fenster zuletzt gerendert.
@@ -94,7 +107,6 @@ fn ui_layout(
         .frame(egui::Frame::window(root_ui.style()))
         .show(&mut root_ui, |ui| {
 
-            
             let rect = ui.available_rect_before_wrap();
             ui.allocate_rect(rect, egui::Sense::hover());
         });
@@ -102,22 +114,22 @@ fn ui_layout(
 
     // Teile die Fläche in zwei Teile
     let half_width = root_ui.available_width() * 0.5;
-    egui::Panel::right("eyecam_camera")
+    egui::Panel::right("eyecam_sensor")
         .resizable(true)
         .default_size(half_width)
         .frame(egui::Frame::NONE)
         .show(&mut root_ui, |ui| {
-            
+            // Nehme den Inhalt der rechten Seite,
+            // und erstelle daraus ein Rect für den Sensor.
             let rect = ui.available_rect_before_wrap();
             ui.allocate_rect(rect, egui::Sense::hover());
+            rects.view_sensor = rect;
         });
+
 
     // Nehme den Inhalt der verbleibenden linken Seite,
     // und erstelle daraus ein Rect.
-
     rects.view_camera = root_ui.available_rect_before_wrap();
-    // rects.view3d = root_ui.available_rect_before_wrap();
-
 
     Ok(())
 }
@@ -127,12 +139,14 @@ fn update_viewports(
     mut contexts: EguiContexts,
     rects: Res<ViewRects>,
     window: Single<&Window>,
-    mut view_camera: Single<&mut Camera, With<CameraForViewCamera>>,
+    mut view_camera: Single<&mut Camera, (With<CameraForViewCamera>, Without<CameraForViewSensor>)>,
+    mut view_sensor: Single<&mut Camera, (With<CameraForViewSensor>, Without<CameraForViewCamera>)>
 ) -> Result {
     let ppp = contexts.ctx_mut()?.pixels_per_point();
     let window_size = window.physical_size();
 
     view_camera.viewport = to_viewport(rects.view_camera, ppp, window_size);
+    view_sensor.viewport = to_viewport(rects.view_sensor, ppp, window_size);
     Ok(())
 }
 
