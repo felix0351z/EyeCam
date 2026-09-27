@@ -24,21 +24,23 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rpackets.proto\x12\x07packets\"\x7f\n\nYoloPacket\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\x04\x12\x14\n\x0ctimestamp_ms\x18\x02 \x01(\x04\x12\x12\n\njpeg_bytes\x18\x03 \x01(\x0c\x12\x13\n\x0b\x63onfidences\x18\x04 \x01(\x0c\x12\x11\n\tclass_ids\x18\x05 \x01(\x0c\x12\r\n\x05\x62oxes\x18\x06 \x01(\x0c\">\n\nGraphValue\x12!\n\x04name\x18\x01 \x01(\x0e\x32\x13.packets.GraphLabel\x12\r\n\x05value\x18\x02 \x01(\x02\"D\n\x0bGraphPacket\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\x04\x12#\n\x06graphs\x18\x02 \x03(\x0b\x32\x13.packets.GraphValue\"_\n\x06Packet\x12#\n\x04yolo\x18\x01 \x01(\x0b\x32\x13.packets.YoloPacketH\x00\x12%\n\x05graph\x18\x02 \x01(\x0b\x32\x14.packets.GraphPacketH\x00\x42\t\n\x07payload*<\n\nGraphLabel\x12\r\n\tZONE_LEFT\x10\x00\x12\x0f\n\x0bZONE_MIDDLE\x10\x01\x12\x0e\n\nZONE_RIGHT\x10\x02\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rpackets.proto\x12\x07packets\"\x7f\n\nYoloPacket\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\x04\x12\x14\n\x0ctimestamp_ms\x18\x02 \x01(\x04\x12\x12\n\njpeg_bytes\x18\x03 \x01(\x0c\x12\x13\n\x0b\x63onfidences\x18\x04 \x01(\x0c\x12\x11\n\tclass_ids\x18\x05 \x01(\x0c\x12\r\n\x05\x62oxes\x18\x06 \x01(\x0c\"R\n\x0cSensorPacket\x12\x13\n\x0b\x64istance_mm\x18\x01 \x01(\x0c\x12\x15\n\rtarget_status\x18\x02 \x01(\x0c\x12\x16\n\x0erange_sigma_mm\x18\x03 \x01(\x0c\">\n\nGraphValue\x12!\n\x04name\x18\x01 \x01(\x0e\x32\x13.packets.GraphLabel\x12\r\n\x05value\x18\x02 \x01(\x02\"D\n\x0bGraphPacket\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\x04\x12#\n\x06graphs\x18\x02 \x03(\x0b\x32\x13.packets.GraphValue\"\x88\x01\n\x06Packet\x12#\n\x04yolo\x18\x01 \x01(\x0b\x32\x13.packets.YoloPacketH\x00\x12\'\n\x06sensor\x18\x02 \x01(\x0b\x32\x15.packets.SensorPacketH\x00\x12%\n\x05graph\x18\x03 \x01(\x0b\x32\x14.packets.GraphPacketH\x00\x42\t\n\x07payload*<\n\nGraphLabel\x12\r\n\tZONE_LEFT\x10\x00\x12\x0f\n\x0bZONE_MIDDLE\x10\x01\x12\x0e\n\nZONE_RIGHT\x10\x02\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'packets_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_GRAPHLABEL']._serialized_start=386
-  _globals['_GRAPHLABEL']._serialized_end=446
+  _globals['_GRAPHLABEL']._serialized_start=512
+  _globals['_GRAPHLABEL']._serialized_end=572
   _globals['_YOLOPACKET']._serialized_start=26
   _globals['_YOLOPACKET']._serialized_end=153
-  _globals['_GRAPHVALUE']._serialized_start=155
-  _globals['_GRAPHVALUE']._serialized_end=217
-  _globals['_GRAPHPACKET']._serialized_start=219
-  _globals['_GRAPHPACKET']._serialized_end=287
-  _globals['_PACKET']._serialized_start=289
-  _globals['_PACKET']._serialized_end=384
+  _globals['_SENSORPACKET']._serialized_start=155
+  _globals['_SENSORPACKET']._serialized_end=237
+  _globals['_GRAPHVALUE']._serialized_start=239
+  _globals['_GRAPHVALUE']._serialized_end=301
+  _globals['_GRAPHPACKET']._serialized_start=303
+  _globals['_GRAPHPACKET']._serialized_end=371
+  _globals['_PACKET']._serialized_start=374
+  _globals['_PACKET']._serialized_end=510
 # @@protoc_insertion_point(module_scope)

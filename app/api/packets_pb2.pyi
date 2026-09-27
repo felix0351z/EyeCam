@@ -32,6 +32,16 @@ class YoloPacket(_message.Message):
     boxes: bytes
     def __init__(self, frame_id: _Optional[int] = ..., timestamp_ms: _Optional[int] = ..., jpeg_bytes: _Optional[bytes] = ..., confidences: _Optional[bytes] = ..., class_ids: _Optional[bytes] = ..., boxes: _Optional[bytes] = ...) -> None: ...
 
+class SensorPacket(_message.Message):
+    __slots__ = ("distance_mm", "target_status", "range_sigma_mm")
+    DISTANCE_MM_FIELD_NUMBER: _ClassVar[int]
+    TARGET_STATUS_FIELD_NUMBER: _ClassVar[int]
+    RANGE_SIGMA_MM_FIELD_NUMBER: _ClassVar[int]
+    distance_mm: bytes
+    target_status: bytes
+    range_sigma_mm: bytes
+    def __init__(self, distance_mm: _Optional[bytes] = ..., target_status: _Optional[bytes] = ..., range_sigma_mm: _Optional[bytes] = ...) -> None: ...
+
 class GraphValue(_message.Message):
     __slots__ = ("name", "value")
     NAME_FIELD_NUMBER: _ClassVar[int]
@@ -49,9 +59,11 @@ class GraphPacket(_message.Message):
     def __init__(self, frame_id: _Optional[int] = ..., graphs: _Optional[_Iterable[_Union[GraphValue, _Mapping]]] = ...) -> None: ...
 
 class Packet(_message.Message):
-    __slots__ = ("yolo", "graph")
+    __slots__ = ("yolo", "sensor", "graph")
     YOLO_FIELD_NUMBER: _ClassVar[int]
+    SENSOR_FIELD_NUMBER: _ClassVar[int]
     GRAPH_FIELD_NUMBER: _ClassVar[int]
     yolo: YoloPacket
+    sensor: SensorPacket
     graph: GraphPacket
-    def __init__(self, yolo: _Optional[_Union[YoloPacket, _Mapping]] = ..., graph: _Optional[_Union[GraphPacket, _Mapping]] = ...) -> None: ...
+    def __init__(self, yolo: _Optional[_Union[YoloPacket, _Mapping]] = ..., sensor: _Optional[_Union[SensorPacket, _Mapping]] = ..., graph: _Optional[_Union[GraphPacket, _Mapping]] = ...) -> None: ...
