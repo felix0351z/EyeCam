@@ -1,9 +1,11 @@
 pub mod camera;
 pub mod sensor;
 
-use bevy::camera::Viewport;
+use bevy::camera::{CameraOutputMode, Hdr, Viewport};
+use bevy::render::render_resource::BlendState;
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiGlobalSettings, EguiPrimaryContextPass, PrimaryEguiContext};
+use bevy_panorbit_camera::PanOrbitCamera;
 
 // --------------------------------------
 // Plugin Setup
@@ -61,14 +63,21 @@ fn setup(mut commands: Commands, mut egui_settings: ResMut<EguiGlobalSettings>) 
     // egui an keine Kamera hängen, da es für diese eigene Viewports gibt.
     egui_settings.auto_create_primary_context = false;
 
-    // Erstelle eine neue Kamera für view::camera
-    commands.spawn((Camera2d, Camera { order: 0, ..default() }, CameraForViewCamera));
+    // Erstelle eine neue Kamera für view::camera.
+    // Msaa::Off, da Bevy die 2D-Tiefentextur pro Fenster teilt
+    // und alle 2D-Kameras (inkl. egui) daher dieselbe Sample-Anzahl haben müssen.
+    commands.spawn((Camera2d, Camera { order: 0, ..default() }, Msaa::Off, CameraForViewCamera));
 
-    // Erstelle eine neue Kamera für view::sensor
+    // Erstelle eine neue Kamera für view::sensor.
+    // Der Fokus liegt knapp vor dem Sensor (-Z), damit dieser mittig im Bild erscheint.
+    // Die Kamera steht schräg seitlich darüber, sodass die Vorderseite sichtbar ist.
+    let sensor_focus = Vec3::new(0.0, 0.0, -0.1);
     commands.spawn((
         Camera3d::default(),
-        Camera { order: 1, clear_color: ClearColorConfig::None, ..default() },
-        Transform::from_xyz(4.0, 3.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Camera { order: 1, clear_color: ClearColorConfig::Custom(Color::srgb_u8(27, 27, 27)), ..default() },
+        Hdr,
+        Transform::from_xyz(0.6, 0.35, 0.1).looking_at(sensor_focus, Vec3::Y),
+        PanOrbitCamera { focus: sensor_focus, ..default() },
         CameraForViewSensor,
     ));
 
@@ -76,7 +85,17 @@ fn setup(mut commands: Commands, mut egui_settings: ResMut<EguiGlobalSettings>) 
     // Wird über das ganze Fenster zuletzt gerendert.
     commands.spawn((
         Camera2d,
-        Camera { order: 2, clear_color: ClearColorConfig::None, ..default() },
+        Camera {
+            order: 2,
+            clear_color: ClearColorConfig::Custom(Color::NONE),
+            output_mode: CameraOutputMode::Write {
+                blend_state: Some(BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                clear_color: ClearColorConfig::None,
+            },
+            ..default()
+        },
+        Hdr,
+        Msaa::Off,
         PrimaryEguiContext,
         bevy::camera::visibility::RenderLayers::none(),
     ));

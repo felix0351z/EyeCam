@@ -13,6 +13,7 @@ bevy_egui = "0.42.0"
 prost = "0.14.4"
 zune-jpeg = "0.5.15"
 crossbeam-channel = "0.5.17"
+bevy_panorbit_camera = "0.35.1"
 
 [profile.dev]
 opt-level = 1
