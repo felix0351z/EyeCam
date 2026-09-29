@@ -20,7 +20,7 @@ class ZoneBasedDetection(DetectionAlgorithm):
         A distance measurement by a sensor would be preferred instead.
         """
         super().__init__()
-        self._percentages = [deque(maxlen=10)] * 3
+        self._percentages = [deque([0.0] * 10, maxlen=10,)] * 3
 
     def get_percentages(self):
         windows = np.array(self._percentages)

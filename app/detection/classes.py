@@ -31,7 +31,7 @@ class DetectionAlgorithm(abc.ABC):
         self._last_dodge = time.monotonic()
         self._subscriber = []
 
-    def add_subscriber(self, subscriber: Callable[DodgeDirection]):
+    def add_subscriber(self, subscriber: Callable):
         """
         Add a subscriber to the detection algorithm.
         """
