@@ -1,77 +1,78 @@
-from typing import Any
 from collections import deque
 
-import cv2
 import numpy as np
 
-from detection.classes import DetectionAlgorithm
+from detection.classes import DetectionAlgorithm, MoveDirection
+from yolo.classes import YOLOOutput
 
 
-# TODO
 class ZoneBasedDetection(DetectionAlgorithm):
+    MOVE_THRESHOLD = 0.5
 
-    def __init__(self, model_size: tuple[int, int]):
-        self.model_size = model_size
-        self.percentages = [deque(maxlen=10), deque(maxlen=10), deque(maxlen=10)]
+
+    def __init__(self):
+        """
+        This class implements a dumb-simple zone-based detection algorithm.
+
+        The picture will be separated into 3 parts: Left, Middle and a Right zone.
+        If a box covers more than X % of the middle zone, decide to dodge to left or right.
+        If the left or right zone is obstacle free (less than X %), move there.
+
+        This class completely relies on the YOLO output.
+        A distance measurement by a sensor would be preferred instead.
+        """
+        super().__init__()
+        self._percentages = [deque([0.0] * 10, maxlen=10) for _ in range(3)]
 
     def get_percentages(self):
-        return list(map(lambda d: np.average(d), self.percentages))
+        windows = np.array(self._percentages)
+        return np.mean(windows, axis=1)
 
+    def calculate_zone_coverage(self, image_shape, boxes: np.ndarray):
+        # Calculate width and height
+        # Because there are 3 zones, one zone has 1/3 width
+        zone_height = image_shape[0]
+        zone_width = image_shape[1] / 3
 
-    def calculate_zone_coverage(self, frame: np.ndarray, boxes: list[Any], debug: bool = True) -> np.ndarray:
-        """
-        Calculate the coverage of the 3 zones (left, middle, right) in percent.
-        :param frame: The input frame
-        :param boxes: The boxes returned by the cnn model. The boxes have to be in the format [x1, y1, x2, y2]
-        :param debug: If true, the coverage for the middle zone will be displayed
-        :return:
-        """
-
-        # Calculate the zone coordinates
-        zone_width = int(frame.shape[1] / 3)
-        zone_height = frame.shape[0]
-        zone_size = zone_width * zone_height
+        # Calculate start and end width of each zone
         zones = np.array([[0, 1], [1, 2], [2, 3]]) * zone_width
 
-        # Calculate the coverage for every box in the 3 zones
+        # Boxes
+        y1 = np.clip(boxes[:, 1], 0, zone_height)
+        y2 = np.clip(boxes[:, 3], 0, zone_height)
+        boxes_height = np.abs(y2 - y1)
+
         for (i, (x_start, x_end)) in enumerate(zones):
-            per = []
-            for box in boxes:
-                x1, y1 = box[0]
-                x2, y2 = box[1]
-                height = y2 - y1
+            # Clip the boxes to the current zone
+            x1 = np.clip(boxes[:, 0], x_start, x_end)
+            x2 = np.clip(boxes[:, 2], x_start, x_end)
 
-                # Calculate the width for the box in the zone
-                if x2 > x_end:
-                    x2 = x_end
-                if x1 < x_start:
-                    x1 = x_start
+            # Boxes outside the zone have a width of 0
+            boxes_width = x2 - x1
 
-                # Negative values mean, that the box is in another zone, so these should be ignored
-                width = max(x2 - x1, 0)
+            # Calculate the coverage of each box for the current zone
+            percentage = (boxes_width * boxes_height) / (zone_width * zone_height)
 
-                percentage = (width * height) / zone_size
-                per.append(percentage)
-
-                # Debug preview for zone middle
-                if debug:
-                    # Show the coverage for the middle zone
-                    if i == 1:
-                        debug_pt1 = (x1, y1)
-                        debug_pt2 = (x2, y2)
-                        cv2.rectangle(img=frame, pt1=debug_pt1, pt2=debug_pt2, color=(0, 255, 0), thickness=1)
-
-            # Take the biggest box as reference
-            if len(per) > 0:
-                self.percentages[i].append(np.max(per))
-        return frame
+            # Take the box with the largest coverage for the zone
+            # If there are no boxes, the zone is free
+            self._percentages[i].append(np.max(percentage) if len(percentage) > 0 else 0.0)
 
 
-    def process_frame(self, frame: np.ndarray, net_output: np.ndarray) -> np.ndarray:
-        # Get the output data from the cnn model
-        class_ids, confidences, boxes = net_output
+    def calculate(self, yolo_output: YOLOOutput):
+        # Calculate the box coverage for each zone
+        self.calculate_zone_coverage(yolo_output.image.shape, yolo_output.boxes)
+        left, middle, right = self.get_percentages()
 
-        # Calculate the coverage of the 3 zones
-        frame = self.calculate_zone_coverage(frame, boxes)
+        # No obstacle ahead
+        if middle <= self.MOVE_THRESHOLD:
+            return
 
-        return frame
+        # Stop if both sides are blocked
+        if min(left, right) > self.MOVE_THRESHOLD:
+            self._move(MoveDirection.STOP)
+        # Move to the side with less coverage
+        elif left <= right:
+            self._move(MoveDirection.LEFT)
+        else:
+            self._move(MoveDirection.RIGHT)
+
