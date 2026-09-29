@@ -2,7 +2,7 @@ import time
 
 from picamera2 import Picamera2
 
-from detection.classes import DodgeDirection
+from detection.classes import MoveDirection
 from detection.zone_based import ZoneBasedDetection
 from sender import Sender
 from yolo.model import YoloV5, pre_process, YoloV26
@@ -19,8 +19,8 @@ picam2.start()
 yolo_model = YoloV26(MODEL_PATH)
 sender = Sender()
 
-def on_detection(direction: DodgeDirection):
-    print(f"Move to ${direction}!")
+def on_detection(direction: MoveDirection):
+    print(f"Move to {direction}!")
 
 detection_algorithm = ZoneBasedDetection()
 detection_algorithm.add_subscriber(on_detection)
@@ -44,7 +44,7 @@ while True:
     sender.send_yolo_packet(yolo_output)
 
     # Detection algorithm
-    detection_algorithm.check(yolo_output)
+    detection_algorithm.calculate(yolo_output)
 
     # Measure fps and print out every second
     frames += 1
