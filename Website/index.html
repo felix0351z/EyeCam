@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EyeCam</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="brand">EyeCam<span>.</span></a>
+      <nav>
+        <a href="index.html">Start</a>
+        <a href="funktionsweise.html">Funktionsweise</a>
+        <a href="team.html">Team</a>
+        <a href="kontakt.html">Kontakt</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h1>Ein Warnsystem, das man spuert statt sieht.</h1>
+      <p class="lede">
+        Die auf Brusthöhe montierte Raspberry Pi Camera Module 3 erkennt Hindernisse in der Umgebung und sendet Signale an zwei Armbänder, um dem Nutzer die Richtung zum Ausweichen anzuzeigen (links oder rechts). Die Kamera ist mit einem Raspberry Pi verbunden, auf dem die Bildverarbeitung durchgeführt wird. Für die Armbänder werden Arduino-Nano-Module in Kombination mit Vibrationsmotoren verwendet, um haptisches Feedback zu erzeugen. Zusätzlich ist der Einsatz von Ultraschallsensoren geplant, um mögliche Ungenauigkeiten bei der Distanzmessung der Kamera zu verbessern. Für die Hinderniserkennung wird OpenCV verwendet.
+      </p>
+    </div>
+  </section>
+
+  <section id="ueberblick">
+    <div class="container">
+      <h2>Wie das System funktioniert</h2>
+      <p class="placeholder">
+        [Platzhalter: Hier koennt ihr ein Foto oder eine Skizze des Aufbaus einfuegen —
+        z. B. &lt;img src="bilder/aufbau.jpg" alt="Aufbau des Geraets"&gt;]
+      </p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <h3>Erkennen</h3>
+          <p>
+            Eine am Koerper getragene Kamera erfasst laufend die Umgebung und
+            erkennt Hindernisse per Bildverarbeitung.
+            [Platzhalter: genutzte Hardware/Software ergaenzen, z. B. Raspberry Pi + YOLO]
+          </p>
+        </div>
+        <div class="flow-step">
+          <h3>Senden</h3>
+          <p>
+            Sobald ein Hindernis erkannt wird, sendet das Geraet ein Signal per
+            Bluetooth Low Energy (BLE) an eines von zwei Armbaendern —
+            je nachdem, auf welcher Seite ausgewichen werden soll.
+          </p>
+        </div>
+        <div class="flow-step">
+          <h3>Spueren</h3>
+          <p>
+            Das Armband gibt eine haptische Rueckmeldung (Vibration), die
+            anzeigt: ein paar Schritte nach links oder rechts ausweichen.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="warum">
+    <div class="container two-col">
+      <div>
+        <h2>Warum dieses Projekt?</h2>
+        <p>
+          [Platzhalter: Motivation/Problemstellung — z. B. "Viele bestehende
+          Hilfsmittel fuer sehbehinderte Menschen setzen auf akustische
+          Signale, die im Alltag stoeren oder das Gehoer als wichtigsten
+          verbleibenden Sinn zusaetzlich belasten koennen. Unser Ansatz nutzt
+          stattdessen den Tastsinn."]
+        </p>
+      </div>
+      <div>
+        <h2>Auf einen Blick</h2>
+        <table class="spec">
+          <tr><th>Mikrocontroller</th><td>[Platzhalter: z. B. 2x ESP32-C3]</td></tr>
+          <tr><th>Kamera/Recheneinheit</th><td>[Platzhalter: z. B. Raspberry Pi 4]</td></tr>
+          <tr><th>Kommunikation</th><td>Bluetooth Low Energy (BLE)</td></tr>
+          <tr><th>Feedback</th><td>Haptisch (Vibrationsmotor)</td></tr>
+          <tr><th>Status</th><td>[Platzhalter: Projektstand]</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      E3FS3T/E3IT1T · &copy; 2026
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

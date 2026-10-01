@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kontakt — [Platzhalter: Projektname]</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="brand">[Projektname]<span>.</span></a>
+      <nav>
+        <a href="index.html">Start</a>
+        <a href="funktionsweise.html">Funktionsweise</a>
+        <a href="team.html">Team</a>
+        <a href="kontakt.html">Kontakt</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero" style="padding-bottom: 32px;">
+    <div class="container">
+      <h1>Fragen? Schreibt uns.</h1>
+      <p class="lede">
+        [Platzhalter: kurzer Text, z. B. "Ihr habt Fragen zum Projekt, wollt
+        Feedback geben oder mit uns kooperieren? Schreibt uns eine Nachricht."]
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Kontaktformular</h2>
+
+      <form class="contact-form" id="contact-form">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" required />
+        </div>
+
+        <div class="field">
+          <label for="email">E-Mail</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+
+        <div class="field">
+          <label for="message">Nachricht</label>
+          <textarea id="message" name="message" required></textarea>
+        </div>
+
+        <button type="submit" class="submit">Nachricht senden</button>
+        <div id="form-status" role="status"></div>
+      </form>
+
+      <p class="placeholder" style="margin-top: 28px;">
+        [Platzhalter: Die Nachricht wird per REST-API (POST /api/contact) an das
+        kleine Node.js-Backend im Ordner "api" geschickt. Passt in js/main.js
+        die Konstante API_BASE_URL an eure lokale Adresse oder euer Deployment an.]
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Weitere Kontaktmoeglichkeiten</h2>
+      <table class="spec">
+        <tr><th>E-Mail</th><td>[Platzhalter: name@beispiel.de]</td></tr>
+        <tr><th>Schule</th><td>[Platzhalter]</td></tr>
+        <tr><th>GitHub / Repository</th><td>[Platzhalter: Link zum Code]</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      E3FS3T/E3IT1T · &copy; 2026
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
