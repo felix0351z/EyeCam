@@ -4,7 +4,6 @@ import time
 from picamera2 import Picamera2
 
 from detection.classes import MoveDirection
-from detection.sensor_zone import SensorZoneDetection
 from detection.zone_based import ZoneBasedDetection
 from sender import Sender
 from sensor.fake_reader import FakeSensorReader
@@ -43,11 +42,7 @@ sender = Sender()
 def on_detection(direction: MoveDirection):
     print(f"Move to {direction}!")
 
-# Es ist immer genau EIN Algorithmus aktiv (sonst doppelte Armband-Impulse)
-if USE_SENSOR_DETECTION and sensor_reader is not None:
-    detection_algorithm = SensorZoneDetection(fallback=ZoneBasedDetection())
-else:
-    detection_algorithm = ZoneBasedDetection()
+detection_algorithm = ZoneBasedDetection()
 detection_algorithm.add_subscriber(on_detection)
 
 
@@ -84,8 +79,8 @@ try:
         # TODO (optional): Zonenwerte als GraphPacket senden, sobald sender.py bekannt:
         # left, middle, right = detection_algorithm.get_percentages()
 
-        # Detection algorithm
-        detection_algorithm.calculate(yolo_output, sensor_frame)
+        # TODO: sensor_frame im Algorithmus verwenden (aktuell nur YOLO)
+        detection_algorithm.calculate(yolo_output)
 
         # Measure fps and print out every second
         frames += 1
