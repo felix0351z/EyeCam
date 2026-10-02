@@ -17,10 +17,16 @@ def make_grid(near_cols=(), near_mm=600, far_mm=3000) -> np.ndarray:
 class FakeSensorReader(threading.Thread):
     """
     Ersatz für SensorReader ohne Hardware (gleiche Schnittstelle:
-    start(), latest(), stop()). Spielt im Kreis Szenarien durch:
+    start(), latest(), stop()). Spielt im Kreis Szenarien durch und
+    nennt das erwartete Ergebnis:
 
-        frei -> Hindernis Mitte -> Hindernis links -> Hindernis rechts
-        -> alles blockiert -> Sensor-Ausfall (kein neuer Frame)
+        frei                              -> keine Reaktion
+        Hindernis nur links               -> keine Reaktion (Weg vorn ist frei)
+        Mitte blockiert, Seiten frei      -> LEFT
+        Mitte + rechts blockiert          -> LEFT
+        links + Mitte blockiert           -> RIGHT
+        alles blockiert                   -> STOP
+        Sensor-Ausfall (keine neuen Frames)
 
     Jedes Szenario dauert SCENARIO_S Sekunden bei 15 Hz.
     """
@@ -29,12 +35,13 @@ class FakeSensorReader(threading.Thread):
     SCENARIO_S = 4.0
 
     SCENARIOS = [
-        ("frei",             ()),
-        ("Hindernis Mitte",  (2, 3, 4, 5)),
-        ("Hindernis links",  (0, 1, 2, 3)),
-        ("Hindernis rechts", (4, 5, 6, 7)),
-        ("alles blockiert",  tuple(range(8))),
-        ("Sensor-Ausfall",   None),   # None = keine neuen Frames
+        ("frei",                         ()),
+        ("Hindernis nur links",          (0, 1)),
+        ("Mitte blockiert, Seiten frei", (2, 3, 4, 5)),
+        ("Mitte + rechts blockiert",     (2, 3, 4, 5, 6, 7)),
+        ("links + Mitte blockiert",      (0, 1, 2, 3, 4, 5)),
+        ("alles blockiert",              tuple(range(8))),
+        ("Sensor-Ausfall",               None),   # None = keine neuen Frames
     ]
 
     def __init__(self):
