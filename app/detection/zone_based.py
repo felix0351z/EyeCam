@@ -2,8 +2,7 @@ from collections import deque
 
 import numpy as np
 
-from detection.classes import DetectionAlgorithm
-from sensor.classes import SensorFrame
+from detection.classes import DetectionAlgorithm, MoveDirection
 from yolo.classes import YOLOOutput
 
 
@@ -59,11 +58,21 @@ class ZoneBasedDetection(DetectionAlgorithm):
             self._percentages[i].append(np.max(percentage) if len(percentage) > 0 else 0.0)
 
 
-    def calculate(self, yolo_output: YOLOOutput, sensor: SensorFrame | None = None):
-        # The sensor is ignored here, this algorithm only uses YOLO.
-
+    def calculate(self, yolo_output: YOLOOutput):
         # Calculate the box coverage for each zone
         self.calculate_zone_coverage(yolo_output.image.shape, yolo_output.boxes)
         left, middle, right = self.get_percentages()
 
-        self._decide(left, middle, right, self.MOVE_THRESHOLD)
+        # No obstacle ahead
+        if middle <= self.MOVE_THRESHOLD:
+            return
+
+        # Stop if both sides are blocked
+        if min(left, right) > self.MOVE_THRESHOLD:
+            self._move(MoveDirection.STOP)
+        # Move to the side with less coverage
+        elif left <= right:
+            self._move(MoveDirection.LEFT)
+        else:
+            self._move(MoveDirection.RIGHT)
+

@@ -3,7 +3,6 @@ import time
 from collections.abc import Callable
 from enum import Enum
 
-from sensor.classes import SensorFrame
 from yolo.classes import YOLOOutput
 
 
@@ -11,6 +10,7 @@ class MoveDirection(Enum):
     LEFT = 0
     RIGHT = 1
     STOP = 2
+
 
 
 class DetectionAlgorithm(abc.ABC):
@@ -36,34 +36,15 @@ class DetectionAlgorithm(abc.ABC):
 
         self._subscriber.append(subscriber)
 
+
     @abc.abstractmethod
-    def calculate(self, yolo_output: YOLOOutput, sensor: SensorFrame | None = None):
+    def calculate(self, yolo_output: YOLOOutput):
         """
         Algorithm logic, implemented by all subclasses.
-        Needs to be called every frame in the main loop.
-
-        sensor is None if there is no (or only outdated) sensor data.
+        Needs to be called every frame in the main loop
         """
         pass
 
-    def _decide(self, left: float, middle: float, right: float, threshold: float):
-        """
-        Shared decision logic for all zone based algorithms.
-        Inputs are the (smoothed) obstacle values of the three zones.
-        """
-
-        # No obstacle ahead
-        if middle <= threshold:
-            return
-
-        # Stop if both sides are blocked
-        if min(left, right) > threshold:
-            self._move(MoveDirection.STOP)
-        # Move to the side with less coverage
-        elif left <= right:
-            self._move(MoveDirection.LEFT)
-        else:
-            self._move(MoveDirection.RIGHT)
 
     def _move(self, direction: MoveDirection):
         """
