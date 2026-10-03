@@ -3,7 +3,7 @@ use crossbeam_channel::Sender;
 use prost::Message;
 use std::error::Error;
 use std::io::{BufReader, Read};
-use std::net::{TcpListener, TcpStream};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use zune_jpeg::JpegDecoder;
 use zune_jpeg::zune_core::bytestream::ZCursor;
 // --------------------------------------
@@ -14,7 +14,12 @@ use zune_jpeg::zune_core::bytestream::ZCursor;
 pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>) {
     std::thread::spawn(move || {
 
-        let listener = TcpListener::bind("192.168.178.100:6969").expect("Unable to bind TCP listener");
+        let local_ip = local_ip_address::local_ip()
+            .expect("Unable to get local IP address");
+        println!("Local IP: {}", local_ip);
+        let socket = SocketAddr::new(local_ip, 6969);
+
+        let listener = TcpListener::bind(socket).expect("Unable to bind TCP listener");
         for stream in listener.incoming() {
             // Get the stream and open a new buffer reader
             let stream = stream.unwrap();
