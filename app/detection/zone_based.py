@@ -1,52 +1,9 @@
 from collections import deque
-from dataclasses import dataclass
 
 import numpy as np
 
 from detection.classes import DetectionAlgorithm, MoveDirection
-from detection.tracker.byte_tracker import BYTETracker
 from yolo.classes import YOLOOutput
-
-class Tracker:
-    """
-    ByteTrack Tracker
-    """
-
-    @dataclass
-    class TrackerArgs:
-        track_thresh: float = 0.5
-        track_buffer: int = 30
-        match_thresh: float = 0.8
-        mot20: bool = False
-
-    def __init__(self):
-        self._tracker = BYTETracker(self.TrackerArgs())
-
-    def update(self, yolo_output: YOLOOutput, image_shape):
-        # Boxes is a 2D ndarray, containing [ [x1, y2, x2, y2] , ...]
-        # Confidences and class ids are 1D arrays in the same order as the boxes
-        # Stack them to [ [x1, y1, x2, y2, score, class_id], ...]. This is the input type for ByteTrack.
-        out_results = np.column_stack(
-            (yolo_output.boxes, yolo_output.confidences, yolo_output.class_ids)
-        ).astype(np.float32)
-        if len(out_results) == 0:
-            out_results = np.empty((0, 6), dtype=np.float32)
-
-        # The two parameters originally are for the size used by the network and the original image size.
-        # Because rescaling already happened, just use the original image size twice.
-        h, w = image_shape[:2]
-        tracks = self._tracker.update(out_results, (h, w), (h, w))
-
-        # Create a new output ndarray, containing [ [x1, y1, x2, y2, score, track_id], ...]
-        if tracks:
-            out = np.array([t.tlbr for t in tracks], dtype=np.float32)
-        else:
-            out = np.empty((0, 6), dtype=np.float32)
-        # Update the boxes
-        yolo_output.boxes = out
-
-
-
 
 
 class ZoneBasedDetection(DetectionAlgorithm):

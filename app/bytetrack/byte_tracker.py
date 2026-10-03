@@ -17,9 +17,9 @@
 
 import numpy as np
 
-from detection.tracker import matching
-from detection.tracker.kalman_filter import KalmanFilter
-from detection.tracker.basetrack import BaseTrack, TrackState
+from bytetrack import matching
+from bytetrack.kalman_filter import KalmanFilter
+from bytetrack.basetrack import BaseTrack, TrackState
 
 
 class STrack(BaseTrack):

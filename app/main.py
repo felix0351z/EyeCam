@@ -4,7 +4,8 @@ import time
 from picamera2 import Picamera2
 
 from detection.classes import MoveDirection
-from detection.zone_based import ZoneBasedDetection, Tracker
+from detection.zone_based import ZoneBasedDetection
+from tracker.tracker import Tracker
 from sender import Sender
 from sensor.reader import SensorReader
 from yolo.model import YoloV5, pre_process, YoloV26
@@ -36,6 +37,7 @@ picam2.configure("preview")
 picam2.start()
 
 yolo_model = YoloV26(MODEL_PATH)
+tracker = Tracker()
 sender = Sender()
 
 def on_detection(direction: MoveDirection):
@@ -44,7 +46,6 @@ def on_detection(direction: MoveDirection):
 detection_algorithm = ZoneBasedDetection()
 detection_algorithm.add_subscriber(on_detection)
 
-tracker = Tracker()
 
 # Measure fps
 frames = 0
@@ -60,13 +61,14 @@ try:
         net = yolo_model.infer(yolo_input)
         yolo_output = yolo_model.post_process(frame, net, yolo_input.transform)
 
-        tracker.update(yolo_output, frame.shape)
+
+        # 2. Use Tracker
+        tracker_result = tracker.update(yolo_output, frame.shape)
 
         # Send the YOLO Output to the analyzer
         sender.send_yolo_packet(yolo_output)
 
-
-        # 2. Use Sensor
+        # 3. Use Sensor
         sensor_frame = None
         if sensor_reader is not None:
             latest = sensor_reader.latest()
@@ -75,7 +77,7 @@ try:
 
 
 
-        # 3. Detection algorithm
+        # 4. Detection algorithm
         # TODO: sensor_frame im Algorithmus verwenden (aktuell nur YOLO)
         detection_algorithm.calculate(yolo_output)
 
