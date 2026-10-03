@@ -5,7 +5,7 @@ import time
 import numpy as np
 import qwiic_vl53l5cx
 
-from sensor.classes import SensorFrame
+from sensor.classes import SensorOutput
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class SensorReader(threading.Thread):
         self._sensor.start_ranging()
 
         self._lock = threading.Lock()
-        self._latest: SensorFrame | None = None
+        self._latest: SensorOutput | None = None
         self._halt = threading.Event()
         self.errors = 0
 
@@ -59,8 +59,7 @@ class SensorReader(threading.Thread):
             try:
                 if self._sensor.check_data_ready():
                     d = self._sensor.get_ranging_data()
-                    frame = SensorFrame(
-                        t=time.monotonic(),
+                    frame = SensorOutput(
                         dist=self._to_grid(d.distance_mm, np.int16),
                         status=self._to_grid(d.target_status, np.uint8),
                         sigma=self._to_grid(d.range_sigma_mm, np.uint16),
@@ -75,7 +74,7 @@ class SensorReader(threading.Thread):
                 log.exception("Sensor-Lesefehler (#%d)", self.errors)
                 time.sleep(0.1)
 
-    def latest(self) -> SensorFrame | None:
+    def latest(self) -> SensorOutput | None:
         with self._lock:
             return self._latest
 

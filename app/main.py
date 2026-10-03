@@ -6,7 +6,6 @@ from picamera2 import Picamera2
 from detection.classes import MoveDirection
 from detection.zone_based import ZoneBasedDetection
 from sender import Sender
-from sensor.fake_reader import FakeSensorReader
 from sensor.reader import SensorReader
 from yolo.model import YoloV5, pre_process, YoloV26
 
@@ -16,14 +15,13 @@ MODEL_PATH = "/home/eyecam/Documents/yolo26n_ncnn_model"
 
 # --- Einstellungen -----------------------------------------------------
 USE_SENSOR_DETECTION = True      # False = nur YOLO wie bisher
-SEND_SENSOR_TO_ANALYZER = False   # erst True, wenn sender.send_sensor_packet existiert
 MAX_SENSOR_AGE_S = 0.2           # ältere Sensordaten gelten als "kein Sensor"
 USE_FAKE_SENSOR = False          # True = Testdaten ohne Hardware (siehe sensor/fake_reader.py)
 # -----------------------------------------------------------------------
 
 # Sensor ZUERST starten: Der Firmware-Upload dauert einige Sekunden
 try:
-    sensor_reader = FakeSensorReader() if USE_FAKE_SENSOR else SensorReader()
+    sensor_reader = SensorReader()
     sensor_reader.start()
 except Exception as e:
     logging.error("Sensor nicht verfügbar, nur YOLO: %s", e)
@@ -55,30 +53,23 @@ try:
     while True:
         frame = picam2.capture_array()
 
-        # Use YOLO
+        # 1. Use YOLO
         yolo_input = pre_process(frame)
         net = yolo_model.infer(yolo_input)
         yolo_output = yolo_model.post_process(frame, net, yolo_input.transform)
-
-        # Use Sensor
-        sensor_frame = None
-        if sensor_reader is not None:
-            latest = sensor_reader.latest()
-            if latest is not None:
-                # Erst an den Analyzer senden (jeden Frame nur einmal) ...
-                if SEND_SENSOR_TO_ANALYZER and latest.t != last_sensor_t:
-                    sender.send_sensor_packet(latest)
-                last_sensor_t = latest.t
-                # ... dann Alter prüfen: zu alte Daten gelten als "kein Sensor"
-                if time.monotonic() - latest.t <= MAX_SENSOR_AGE_S:
-                    sensor_frame = latest
-
         # Send the YOLO Output to the analyzer
         sender.send_yolo_packet(yolo_output)
 
-        # TODO (optional): Zonenwerte als GraphPacket senden, sobald sender.py bekannt:
-        # left, middle, right = detection_algorithm.get_percentages()
 
+        # 2. Use Sensor
+        sensor_frame = None
+        if sensor_reader is not None:
+            latest = sensor_reader.latest()
+            # if latest is not None:
+              # sender.send_sensor_packet(latest)
+
+
+        # 3. Detection algorithm
         # TODO: sensor_frame im Algorithmus verwenden (aktuell nur YOLO)
         detection_algorithm.calculate(yolo_output)
 
