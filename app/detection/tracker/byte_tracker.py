@@ -1,8 +1,8 @@
 import numpy as np
 
-import matching
-from basetrack import BaseTrack, TrackState
-from kalman_filter import KalmanFilter
+from detection.tracker import matching
+from detection.tracker.kalman_filter import KalmanFilter
+from detection.tracker.basetrack import BaseTrack, TrackState
 
 
 class STrack(BaseTrack):
@@ -10,7 +10,7 @@ class STrack(BaseTrack):
     def __init__(self, tlwh, score):
 
         # wait activate
-        self._tlwh = np.asarray(tlwh, dtype=np.float)
+        self._tlwh = np.asarray(tlwh, dtype=np.float64)
         self.kalman_filter = None
         self.mean, self.covariance = None, None
         self.is_activated = False
