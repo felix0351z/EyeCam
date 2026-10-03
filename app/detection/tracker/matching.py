@@ -1,3 +1,18 @@
+# -----------------------------------------------------------------------------
+# This file is part of ByteTrack and is NOT original work of this project.
+#
+# Source:   https://github.com/FoundationVision/ByteTrack
+#           (file: yolox/tracker/matching.py)
+# Paper:    ByteTrack: Multi-Object Tracking by Associating Every Detection Box
+#           Zhang et al., ECCV 2022, https://arxiv.org/abs/2110.06864
+# License:  MIT License, Copyright (c) 2021 Yifu Zhang
+#           See LICENSE_BYTETRACK in this directory for the full license text.
+#
+# Modifications for this project:
+#   - replaced deprecated np.float with np.float64
+#   - changed imports for this project
+# -----------------------------------------------------------------------------
+
 import lap
 import numpy as np
 import scipy
