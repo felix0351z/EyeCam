@@ -24,11 +24,13 @@ class Tracker:
 
     def update(self, yolo_output: YOLOOutput, image_shape):
         # Boxes is a 2D ndarray, containing [ [x1, y2, x2, y2] , ...]
-        # Confidences is a 1D Array, containing the confidence value for all detections in the same order
-        # Add the confidences as a column to the boxes. This is the correct input type for ByteTrack.
-        out_results = np.column_stack((yolo_output.boxes, yolo_output.confidences)).astype(np.float32)
+        # Confidences and class ids are 1D arrays in the same order as the boxes
+        # Stack them to [ [x1, y1, x2, y2, score, class_id], ...]. This is the input type for ByteTrack.
+        out_results = np.column_stack(
+            (yolo_output.boxes, yolo_output.confidences, yolo_output.class_ids)
+        ).astype(np.float32)
         if len(out_results) == 0:
-            out_results = np.empty((0, 5))
+            out_results = np.empty((0, 6), dtype=np.float32)
 
         # The two parameters originally are for the size used by the network and the original image size.
         # Because rescaling already happened, just use the original image size twice.
