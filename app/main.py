@@ -4,7 +4,7 @@ import time
 from picamera2 import Picamera2
 
 from detection.classes import MoveDirection
-from detection.zone_based import ZoneBasedDetection
+from detection.zone_based import ZoneBasedDetection, Tracker
 from sender import Sender
 from sensor.reader import SensorReader
 from yolo.model import YoloV5, pre_process, YoloV26
@@ -19,13 +19,14 @@ MAX_SENSOR_AGE_S = 0.2           # ältere Sensordaten gelten als "kein Sensor"
 USE_FAKE_SENSOR = False          # True = Testdaten ohne Hardware (siehe sensor/fake_reader.py)
 # -----------------------------------------------------------------------
 
+sensor_reader = None
 # Sensor ZUERST starten: Der Firmware-Upload dauert einige Sekunden
-try:
-    sensor_reader = SensorReader()
-    sensor_reader.start()
-except Exception as e:
-    logging.error("Sensor nicht verfügbar, nur YOLO: %s", e)
-    sensor_reader = None
+#try:
+#    sensor_reader = SensorReader()
+#    sensor_reader.start()
+#except Exception as e:
+#    logging.error("Sensor nicht verfügbar, nur YOLO: %s", e)
+#    sensor_reader = None
 
 picam2 = Picamera2()
 picam2.preview_configuration.main.size = (640, 640)
@@ -43,6 +44,7 @@ def on_detection(direction: MoveDirection):
 detection_algorithm = ZoneBasedDetection()
 detection_algorithm.add_subscriber(on_detection)
 
+tracker = Tracker()
 
 # Measure fps
 frames = 0
@@ -57,6 +59,9 @@ try:
         yolo_input = pre_process(frame)
         net = yolo_model.infer(yolo_input)
         yolo_output = yolo_model.post_process(frame, net, yolo_input.transform)
+
+        tracker.update(yolo_output, frame.shape)
+
         # Send the YOLO Output to the analyzer
         sender.send_yolo_packet(yolo_output)
 
@@ -67,6 +72,7 @@ try:
             latest = sensor_reader.latest()
             # if latest is not None:
               # sender.send_sensor_packet(latest)
+
 
 
         # 3. Detection algorithm
