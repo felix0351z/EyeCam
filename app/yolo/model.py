@@ -4,7 +4,7 @@ import ncnn
 from yolo.classes import YOLOInput, LetterboxTransform, YOLOOutput
 from yolo.utils import letterbox, resize_boxes_central_coordinates, nms
 
-THRESHOLD = 0.5
+THRESHOLD = 0.2
 
 def pre_process(image: np.ndarray) -> YOLOInput:
     resized, transform = letterbox(image)
