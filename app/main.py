@@ -63,7 +63,7 @@ try:
 
 
         # 2. Use Tracker
-        tracker_result = tracker.update(yolo_output, frame.shape)
+        track_ids = tracker.update(yolo_output, frame.shape)
 
         # Send the YOLO Output to the analyzer
         sender.send_yolo_packet(yolo_output)
