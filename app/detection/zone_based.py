@@ -1,6 +1,7 @@
 import numpy as np
 
 from detection.classes import DetectionAlgorithm, MoveDirection
+from sensor.classes import SensorOutput
 from yolo.classes import YOLOOutput
 
 
@@ -20,12 +21,10 @@ class ZoneBasedDetection(DetectionAlgorithm):
     SMOOTHING_RISE = 0.6
     SMOOTHING_FALL = 0.2
 
-
     def __init__(self):
         super().__init__()
 
         self._coverage = np.zeros(3, dtype=np.float32)
-
 
     def calculate_zone_coverage(self, image_shape, boxes: np.ndarray) -> np.ndarray:
         percentages = np.zeros(3)
@@ -58,8 +57,7 @@ class ZoneBasedDetection(DetectionAlgorithm):
             percentages[i] = np.max(percentage) if len(percentage) > 0 else 0.0
         return percentages
 
-
-    def calculate(self, yolo_output: YOLOOutput):
+    def calculate(self, yolo_output: YOLOOutput, sensor_output: SensorOutput):
         # Calculate the box coverage for each zone
         current_coverage = self.calculate_zone_coverage(yolo_output.image.shape, yolo_output.boxes)
 
@@ -81,3 +79,35 @@ class ZoneBasedDetection(DetectionAlgorithm):
         else:
             self._move(MoveDirection.RIGHT)
 
+
+class SensorObstacleMap:
+    VALID_STATUS = (5, 9)
+    SIGMA_MM_MAX = 50 # mm
+    RANGE_MM_MAX = 4000 # mm, 4m
+
+    ZONES = ((0, 2), (2, 6), (6, 8))
+
+
+    def calculate(self, sensor_output: SensorOutput):
+        data = sensor_output.dist.astype(np.float32)
+
+        valid_mask = (
+            np.isin(sensor_output.status, self.VALID_STATUS) # Filter correct status
+            & (sensor_output.sigma <= self.SIGMA_MM_MAX) # Filter sigma
+            & (data <= self.RANGE_MM_MAX) # Filter range max
+        )
+
+        # Filter out the last 2 rows for the floor
+        # data = data[:-2]
+
+        # TODO: Wert pro zone nehmen, glätten, gefahrenwert berechnen
+
+
+
+        # Set all invalid values to NaN
+        data[~valid_mask] = np.nan
+        for i, (start, end) in enumerate(self.ZONES):
+            pass
+
+
+        pass
