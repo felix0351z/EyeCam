@@ -250,11 +250,19 @@ section h2::after {
 }
 
 .team-card {
-  background: #fff;
+  /*background: #fff;
   border: 1px solid var(--line);
   border-radius: 4px;
   padding: 20px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;*/
+
+  width: float;
+  padding: 1rem;
+  border-radius: 16px;
+  background: #fff;
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--steel);
+  box-shadow: 0 16px 32px rgba(0,0,0,0.12);
 }
 
 .team-card:hover {
@@ -271,7 +279,7 @@ section h2::after {
   color: #fff;
   display: flex;
   align-items: center;
-  font-family: 'Fraunces', serif;
+  font-family: serif;
   justify-content: center;
   font-size: 1.2rem;
   margin-bottom: 12px;
@@ -324,29 +332,6 @@ table.spec th {
   width: 40%;
 }
 
-/* ---------- Hover ---------- */
-.ss-text{
-  position:relative;
-  font-size:18px;
-  color:#0f172a;
-  text-decoration:none;
-}
-
-.ss-text::after{
-  content:'';
-  position:absolute;
-  left:0;
-  bottom:-4px;
-  width:0;
-  height:2px;
-  background:var(--red);
-  transition:.3s;
-}
-
-.ss-text:hover::after{
-  width:100%;
-}
-
 /* ---------- Footer ---------- */
 
 footer {
@@ -374,4 +359,43 @@ footer {
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+}
+
+/* ---------- shit to try ---------- */
+
+img {
+  display: block;
+  max-width: float;
+}
+
+.stack {
+  width: float;
+  max-width: 600px;
+  transition: 0.25s ease;
+}
+
+.card {
+  aspect-ratio: 3 / 2;
+  border: 4px solid;
+  background-color: var(--line);
+  position: relative;
+  padding: 5% 5% 15% 5%;
+}
+
+.image {
+  width: 100%;
+  border: 4px solid;
+  background-color: var(--line);
+  aspect-ratio: 1 / 1;
+  position: relative;
+}
+
+.browser-warning {
+  margin-bottom: 4rem;
+}
+
+@supports (aspect-ratio: 1 / 1) {
+  .browser-warning {
+    display: none;
+  }
 }
