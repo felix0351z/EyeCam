@@ -6,6 +6,7 @@ import numpy as np
 import simplejpeg
 
 from api import packets_pb2
+from sensor.classes import SensorOutput
 from yolo.classes import YOLOOutput
 
 
@@ -43,6 +44,20 @@ class Sender:
                 confidences=np.ascontiguousarray(data.confidences, dtype='<f4').tobytes(),
                 class_ids=np.ascontiguousarray(data.class_ids, dtype='<i4').tobytes(),
                 boxes=np.ascontiguousarray(data.boxes, dtype='<f4').tobytes()
+            )
+        )
+
+        self._send(packet)
+
+    def send_sensor_packet(self, data: SensorOutput):
+        if self.closed:
+            return
+
+        packet = packets_pb2.Packet(
+            sensor=packets_pb2.SensorPacket(
+                distance_mm=np.ascontiguousarray(data.dist, dtype='<i2').tobytes(),
+                target_status=np.ascontiguousarray(data.status, dtype='<u1').tobytes(),
+                range_sigma_mm=np.ascontiguousarray(data.sigma, dtype='<u2').tobytes(),
             )
         )
 
