@@ -28,6 +28,49 @@
           </div>
           <p class="lede">
             Die auf Brusthöhe montierte Raspberry Pi Camera Module 3 erkennt Hindernisse in der Umgebung und sendet Signale an zwei Armbänder, um dem Nutzer die Richtung zum Ausweichen anzuzeigen (links oder rechts). Die Kamera ist mit einem Raspberry Pi verbunden, auf dem die Bildverarbeitung durchgeführt wird. Für die Armbänder werden Arduino-Nano-Module in Kombination mit Vibrationsmotoren verwendet, um haptisches Feedback zu erzeugen. Zusätzlich ist der Einsatz von Ultraschallsensoren geplant, um mögliche Ungenauigkeiten bei der Distanzmessung der Kamera zu verbessern. Für die Hinderniserkennung wird OpenCV verwendet.
+      <a href="index.html" class="brand">EyeCam<span>.</span></a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <h1>Haptische Hinderniswarnung für unterwegs.</h1>
+      <p class="lede">
+        Die auf Brusthöhe montierte Raspberry Pi Camera Module 3 erkennt Hindernisse in der Umgebung und sendet Signale an zwei Armbänder, um dem Nutzer die Richtung zum Ausweichen anzuzeigen (links oder rechts). Die Kamera ist mit einem Raspberry Pi verbunden, auf dem die Bildverarbeitung durchgeführt wird. Für die Armbänder werden Arduino-Nano-Module in Kombination mit Vibrationsmotoren verwendet, um haptisches Feedback zu erzeugen. Zusätzlich ist der Einsatz von Ultraschallsensoren geplant, um mögliche Ungenauigkeiten bei der Distanzmessung der Kamera zu verbessern. Für die Hinderniserkennung wird OpenCV verwendet.
+      </p>
+    </div>
+  </section>
+
+  <section id="überblick">
+    <div class="container">
+      <h2>Wie das System funktioniert</h2>
+      <p class="placeholder">
+        [Platzhalter: Hier könnt ihr ein Foto oder eine Skizze des Aufbaus einfuegen —
+        z. B. &lt;img src="bilder/aufbau.jpg" alt="Aufbau des Geräts"&gt;]
+      </p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <h3>Erkennen</h3>
+          <p>
+            Eine am Körper getragene Kamera erfasst laufend die Umgebung und
+            erkennt Hindernisse per Bildverarbeitung.
+            [Platzhalter: genutzte Hardware/Software ergaenzen, z. B. Raspberry Pi + YOLO]
+          </p>
+        </div>
+        <div class="flow-step">
+          <h3>Senden</h3>
+          <p>
+            Sobald ein Hindernis erkannt wird, sendet das Gerät ein Signal per
+            Bluetooth Low Energy (BLE) an eines von zwei Armbändern —
+            je nachdem, auf welcher Seite ausgewichen werden soll.
+          </p>
+        </div>
+        <div class="flow-step">
+          <h3>Spüren</h3>
+          <p>
+            Das Armband gibt eine haptische Rückmeldung (Vibration), die
+            anzeigt: ein paar Schritte nach links oder rechts ausweichen.
           </p>
         </div>
       </div>
@@ -182,6 +225,76 @@
     ></path>
   </button>
 
+  <section id="warum">
+    <div class="container two-col">
+      <div>
+        <h2>Warum dieses Projekt?</h2>
+        <p>
+          Laut <a href="https://www.who.int/news-room/fact-sheets/detail/blindness-and-visual-impairment" target="_blank" rel="noopener noreferrer">WHO</a>
+    haben weltweit mindestens 2,2 Milliarden Menschen eine Seheinschränkung. Hilfsmittel, die ihnen im Alltag helfen, sind oft sehr teuer: 
+    Je nach System liegen die Kosten schätzungsweise zwischen 1.000 und 10.000 €.
+    Genau hier setzt EyeCam an. Das System ist klein, alltagstauglich und deutlich günstiger, sodass es für mehr Menschen erschwinglich wird.
+        </p>
+      </div>
+      <div>
+        <h2>Auf einen Blick</h2>
+        <table class="spec">
+          <tr><th>Mikrocontroller</th><td>2x ESP32-C3</td></tr>
+          <tr><th>Kamera/Recheneinheit</th><td>Raspberry Pi 5 mit Cam Module 3</td></tr>
+          <tr><th>Kommunikation</th><td>Bluetooth Low Energy (BLE)</td></tr>
+          <tr><th>Feedback</th><td>Haptisch (Vibrationsmotor)</td></tr>
+          <tr><th>Status</th><td>Fertiges Prototyp</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+  
+   <section class="hero" style="padding-bottom: 32px;">
+    <div class="container">
+      <h1>Wer wir sind</h1>
+      <p class="lede">
+        Wir sind die Auszubildende der Universitätsklinikum Freiburg. 
+      </p>
+    </div>
+   </section>
+
+  <section>
+    <div class="container">
+     <div class="team-grid">
+        
+        <div class="team-card">
+          <div class="avatar">A</div>
+          <h3>Bonheur Rebayesu</h3>
+          <div class="role">[Sensor ... und embedded engineering]</div>
+          <p>[Platzhalter: kurze Beschreibung des Beitrags]</p>
+        </div>
+
+        <div class="team-card">
+          <div class="avatar">B</div>
+          <h3>Felix Zimmerman</h3>
+          <div class="role">Softwareentwicklung</div>
+          <p>[Platzhalter: kurze Beschreibung des Beitrags]</p>
+        </div>
+
+        <div class="team-card">
+          <div class="avatar">C</div>
+          <h3>Anna Piven</h3>
+          <div class="role">Armbänder design und embedded engineering</div>
+          <p>[Platzhalter: kurze Beschreibung des Beitrags]</p>
+        </div>
+        
+     </div>
+   </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2>Danksagung</h2>
+      <p class="placeholder">
+        [Platzhalter: Betreuer, Schule, evtl. Partner oder Unterstützer nennen.]
+      </p>
+    </div>
+  </section>
 
   <footer>
     <div class="container">
