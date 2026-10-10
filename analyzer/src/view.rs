@@ -1,11 +1,11 @@
 pub mod camera;
-pub mod sensor;
+pub mod sensor2d;
 
-use bevy::camera::{CameraOutputMode, Hdr, Viewport};
+use bevy::camera::{CameraOutputMode, Hdr, ScalingMode, Viewport};
+use bevy::camera::visibility::RenderLayers;
 use bevy::render::render_resource::BlendState;
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiGlobalSettings, EguiPrimaryContextPass, PrimaryEguiContext};
-use bevy_panorbit_camera::PanOrbitCamera;
 
 // --------------------------------------
 // Plugin Setup
@@ -47,7 +47,7 @@ impl Default for ViewRects {
 struct CameraForViewCamera;
 
 /// Bevy-Kamera für die rechte Seite des Fensters,
-/// in welchem der VL53L5CX Sensor in `view::sensor`. dargestellt werden soll.
+/// in welchem der VL53L5CX Sensor in `view::sensor2d`. dargestellt werden soll.
 #[derive(Component)]
 struct CameraForViewSensor;
 
@@ -66,18 +66,28 @@ fn setup(mut commands: Commands, mut egui_settings: ResMut<EguiGlobalSettings>) 
     // Erstelle eine neue Kamera für view::camera.
     // Msaa::Off, da Bevy die 2D-Tiefentextur pro Fenster teilt
     // und alle 2D-Kameras (inkl. egui) daher dieselbe Sample-Anzahl haben müssen.
-    commands.spawn((Camera2d, Camera { order: 0, ..default() }, Msaa::Off, CameraForViewCamera));
-
-    // Erstelle eine neue Kamera für view::sensor.
-    // Der Fokus liegt knapp vor dem Sensor (-Z), damit dieser mittig im Bild erscheint.
-    // Die Kamera steht schräg seitlich darüber, sodass die Vorderseite sichtbar ist.
-    let sensor_focus = Vec3::new(0.0, 0.0, -0.1);
     commands.spawn((
-        Camera3d::default(),
+        Camera2d, 
+        Camera { order: 0, ..default() }, 
+        Msaa::Off, 
+        CameraForViewCamera
+    ));
+
+    // Erstelle eine neue Kamera für view::sensor2d.
+    // Eigener RenderLayer, damit sie weder das Kamerabild noch die YOLO-Gizmos (Layer 0) rendert.
+    // AutoMin sorgt dafür, dass das Raster unabhängig von der Viewport-Größe komplett sichtbar ist.
+    commands.spawn((
+        Camera2d,
         Camera { order: 1, clear_color: ClearColorConfig::Custom(Color::srgb_u8(27, 27, 27)), ..default() },
-        Hdr,
-        Transform::from_xyz(0.6, 0.35, 0.1).looking_at(sensor_focus, Vec3::Y),
-        PanOrbitCamera { focus: sensor_focus, ..default() },
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::AutoMin {
+                min_width: sensor2d::GRID_SIZE, 
+                min_height: sensor2d::GRID_SIZE 
+            },
+            ..OrthographicProjection::default_2d()
+        }),
+        Msaa::Off,
+        RenderLayers::layer(sensor2d::SENSOR_LAYER),
         CameraForViewSensor,
     ));
 
@@ -97,7 +107,7 @@ fn setup(mut commands: Commands, mut egui_settings: ResMut<EguiGlobalSettings>) 
         Hdr,
         Msaa::Off,
         PrimaryEguiContext,
-        bevy::camera::visibility::RenderLayers::none(),
+        RenderLayers::none(),
     ));
 }
 

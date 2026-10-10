@@ -25,10 +25,10 @@ last_t, count, t0 = None, 0, time.monotonic()
 try:
     while True:
         f = reader.latest()
-        if f is None or f.t == last_t:
+        if f is None or f.timestamp == last_t:
             time.sleep(0.01)
             continue
-        last_t = f.t
+        last_t = f.timestamp
         count += 1
 
         if count % 5 == 0:  # nicht jedes Bild ausgeben

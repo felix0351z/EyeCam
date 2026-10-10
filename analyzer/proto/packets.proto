@@ -14,7 +14,6 @@ message SensorPacket {
   bytes distance_mm = 1;      // int16,  little endian, 64 Werte (8x8, Zeile für Zeile)
   bytes target_status = 2;    // uint8,  64 Werte
   bytes range_sigma_mm = 3;   // uint16, little endian, 64 Werte
-  uint64 timestamp_ms = 4;    // NEU: time.monotonic() in ms, gleiche Uhr wie YoloPacket
 }
 
 

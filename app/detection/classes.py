@@ -3,6 +3,7 @@ import time
 from collections.abc import Callable
 from enum import Enum
 
+from sensor.classes import SensorOutput
 from yolo.classes import YOLOOutput
 
 
@@ -38,7 +39,7 @@ class DetectionAlgorithm(abc.ABC):
 
 
     @abc.abstractmethod
-    def calculate(self, yolo_output: YOLOOutput):
+    def calculate(self, yolo_output: YOLOOutput, sensor_output: SensorOutput):
         """
         Algorithm logic, implemented by all subclasses.
         Needs to be called every frame in the main loop

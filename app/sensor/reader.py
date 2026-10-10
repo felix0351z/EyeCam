@@ -60,6 +60,7 @@ class SensorReader(threading.Thread):
                 if self._sensor.check_data_ready():
                     d = self._sensor.get_ranging_data()
                     frame = SensorOutput(
+                        timestamp=time.monotonic(),
                         dist=self._to_grid(d.distance_mm, np.int16),
                         status=self._to_grid(d.target_status, np.uint8),
                         sigma=self._to_grid(d.range_sigma_mm, np.uint16),
@@ -75,10 +76,22 @@ class SensorReader(threading.Thread):
                 time.sleep(0.1)
 
     def latest(self) -> SensorOutput | None:
+        """
+        Get the latest frame from the sensor.
+        """
+
         with self._lock:
-            return self._latest
+            if self._latest is not None:
+                if (time.monotonic() - self._latest.timestamp) <= 0.2:
+                    return self._latest
+
+        return None
 
     def stop(self):
+        """
+        Stop the sensor
+        """
+
         self._halt.set()
         self.join(timeout=1.0)
         try:
