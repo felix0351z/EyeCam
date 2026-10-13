@@ -16,9 +16,8 @@
 
     prevBtn.disabled = current === 0;
     nextBtn.disabled = current === pages.length - 1;
-    nextBtn.textContent = current === pages.length - 1 ? 'Ende' : ' \u2192';
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    pages[current].scrollTop = 0;
   }
 
   function goTo(index) {
