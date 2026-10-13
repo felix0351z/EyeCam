@@ -7,8 +7,8 @@
   <title>EyeCam</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
 
+<body>
   <header class="site-header">
     <div class="container">
       <a href="index.html">
@@ -18,7 +18,6 @@
   </header>
 
   <main class="stepper">
-
     <section class="page is-active" data-step="1">
       <div class="hero">
         <div class="container">
@@ -28,49 +27,6 @@
           </div>
           <p class="lede">
             Die auf Brusthöhe montierte Raspberry Pi Camera Module 3 erkennt Hindernisse in der Umgebung und sendet Signale an zwei Armbänder, um dem Nutzer die Richtung zum Ausweichen anzuzeigen (links oder rechts). Die Kamera ist mit einem Raspberry Pi verbunden, auf dem die Bildverarbeitung durchgeführt wird. Für die Armbänder werden Arduino-Nano-Module in Kombination mit Vibrationsmotoren verwendet, um haptisches Feedback zu erzeugen. Zusätzlich ist der Einsatz von Ultraschallsensoren geplant, um mögliche Ungenauigkeiten bei der Distanzmessung der Kamera zu verbessern. Für die Hinderniserkennung wird OpenCV verwendet.
-      <a href="index.html" class="brand">EyeCam<span>.</span></a>
-    </div>
-  </header>
-
-  <section class="hero">
-    <div class="container">
-      <h1>Haptische Hinderniswarnung für unterwegs.</h1>
-      <p class="lede">
-        Die auf Brusthöhe montierte Raspberry Pi Camera Module 3 erkennt Hindernisse in der Umgebung und sendet Signale an zwei Armbänder, um dem Nutzer die Richtung zum Ausweichen anzuzeigen (links oder rechts). Die Kamera ist mit einem Raspberry Pi verbunden, auf dem die Bildverarbeitung durchgeführt wird. Für die Armbänder werden Arduino-Nano-Module in Kombination mit Vibrationsmotoren verwendet, um haptisches Feedback zu erzeugen. Zusätzlich ist der Einsatz von Ultraschallsensoren geplant, um mögliche Ungenauigkeiten bei der Distanzmessung der Kamera zu verbessern. Für die Hinderniserkennung wird OpenCV verwendet.
-      </p>
-    </div>
-  </section>
-
-  <section id="überblick">
-    <div class="container">
-      <h2>Wie das System funktioniert</h2>
-      <p class="placeholder">
-        [Platzhalter: Hier könnt ihr ein Foto oder eine Skizze des Aufbaus einfuegen —
-        z. B. &lt;img src="bilder/aufbau.jpg" alt="Aufbau des Geräts"&gt;]
-      </p>
-
-      <div class="flow">
-        <div class="flow-step">
-          <h3>Erkennen</h3>
-          <p>
-            Eine am Körper getragene Kamera erfasst laufend die Umgebung und
-            erkennt Hindernisse per Bildverarbeitung.
-            [Platzhalter: genutzte Hardware/Software ergaenzen, z. B. Raspberry Pi + YOLO]
-          </p>
-        </div>
-        <div class="flow-step">
-          <h3>Senden</h3>
-          <p>
-            Sobald ein Hindernis erkannt wird, sendet das Gerät ein Signal per
-            Bluetooth Low Energy (BLE) an eines von zwei Armbändern —
-            je nachdem, auf welcher Seite ausgewichen werden soll.
-          </p>
-        </div>
-        <div class="flow-step">
-          <h3>Spüren</h3>
-          <p>
-            Das Armband gibt eine haptische Rückmeldung (Vibration), die
-            anzeigt: ein paar Schritte nach links oder rechts ausweichen.
           </p>
         </div>
       </div>
@@ -126,6 +82,7 @@
             </p>
             <img src="Pictures/who_logo.svg" class="image" style="width: 50%; height: auto; background: var(--navy);" alt="who">
           </div>
+
           <div>
             <h2>Auf einen Blick</h2>
             <table class="spec">
@@ -144,13 +101,11 @@
       <div class="hero" style="padding-bottom: 32px;">
         <div class="container">
           <h1>Wer wir sind</h1>
-
           <p class="lede">
             Wir sind die Auszubildenden des Universitätsklinikums Freiburg.
           </p>
 
           <div class="team-grid">
-
             <div class="stack">
               <div class="team-card">
                 <img src="Pictures/bonheur.jpg" class="image">
@@ -175,7 +130,6 @@
                 </p>
               </div>
             </div>
-
             <div class="stack">
               <div class="team-card">
                 <img src="Pictures/anna.jpg" class="image">
@@ -213,12 +167,11 @@
     <button type="button" class="button" id="prevBtn">
       <img src="Pictures/left.png" alt="left">
     </button>
-    
+
     <button type="button" class="button" id="nextBtn">
       <img src="Pictures/right.png" alt="right">
     </button>
   </main>
-
 
   <footer>
     <div class="container">
