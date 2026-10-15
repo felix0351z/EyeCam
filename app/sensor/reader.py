@@ -1,100 +1,140 @@
 import logging
-import threading
 import time
+import multiprocessing as mp
 
 import numpy as np
-import qwiic_vl53l5cx
 
 from sensor.classes import SensorOutput
 
 log = logging.getLogger(__name__)
 
+SIZE = 8
+GRID_SIZE = SIZE * SIZE
+FREQUENCY_HZ = 15
+FLIP_UD = False
+FLIP_LR = False
 
-class SensorReader(threading.Thread):
+# numpy dtype structure for a shared-memory buffer
+_FRAME_DTYPE = np.dtype([
+    ("timestamp", np.float64),
+    ("dist", np.int16, (SIZE, SIZE)),
+    ("status", np.uint8, (SIZE, SIZE)),
+    ("sigma", np.uint16, (SIZE, SIZE)),
+])
+
+
+def _to_grid(values, dtype) -> np.ndarray:
+    grid = np.asarray(values[:GRID_SIZE], dtype=dtype).reshape(SIZE, SIZE)
+    if FLIP_UD:
+        grid = np.flipud(grid)
+    if FLIP_LR:
+        grid = np.fliplr(grid)
+    return grid
+
+def _start_sensor_process(buf, lock, seq, ready, stop):
     """
-    Liest den VL53L5CX in einem eigenen Thread aus ("Briefkasten").
-
-    Der Thread legt immer nur den NEUESTEN Frame ab. Die Hauptschleife
-    (YOLO) holt ihn per latest() ab, wenn sie Zeit hat, und wird nie
-    vom langsamen I2C-Bus ausgebremst.
+    Start a new process to read data from the sensor.
     """
+    logging.basicConfig(level=logging.INFO)
+    import qwiic_vl53l5cx
 
-    SIZE = 8
-    FREQUENCY_HZ = 15
+    sensor = qwiic_vl53l5cx.QwiicVL53L5CX()
+    if not sensor.is_connected():
+        log.error("VL53L5CX not found on I2C bus.")
+        return
 
-    # Orientierung: Je nach Einbaulage ist das Raster gedreht/gespiegelt.
-    # Mit der Testhand prüfen und hier anpassen! (Hand links -> Spalten 0-1 aktiv)
-    FLIP_UD = False
-    FLIP_LR = False
+    sensor.begin()
+    sensor.set_resolution(GRID_SIZE)
+    sensor.set_ranging_frequency_hz(FREQUENCY_HZ)
+    sensor.start_ranging()
+    ready.set()
+
+    frame = np.frombuffer(buf, dtype=_FRAME_DTYPE, count=1)[0]
+    try:
+        while not stop.is_set():
+            try:
+                if not sensor.check_data_ready():
+                    time.sleep(0.002)
+                    continue
+                t = time.monotonic()
+                d = sensor.get_ranging_data()
+                with lock:
+                    frame["timestamp"] = t
+                    frame["dist"] = _to_grid(d.distance_mm, np.int16)
+                    frame["status"] = _to_grid(d.target_status, np.uint8)
+                    frame["sigma"] = _to_grid(d.range_sigma_mm, np.uint16)
+                    seq.value+=1
+            except Exception:
+                log.exception("Sensor reading failed")
+                time.sleep(1)
+
+    finally:
+        sensor.stop_ranging()
+
+
+class SensorReader:
+    """
+    """
 
     def __init__(self):
-        super().__init__(daemon=True, name="SensorReader")
+        ctx = mp.get_context("spawn")
+        self._buf = ctx.RawArray("B", _FRAME_DTYPE.itemsize)
+        self._lock = ctx.Lock()
+        self._seq = ctx.RawValue("Q", 0)
+        self._ready = ctx.Event()
+        self._stop = ctx.Event()
 
-        self._sensor = qwiic_vl53l5cx.QwiicVL53L5CX()
-        if not self._sensor.is_connected():
-            raise RuntimeError("VL53L5CX nicht gefunden (I2C-Verkabelung prüfen)")
+        self._last_seq = 0
+        self._process = ctx.Process(
+            target=_start_sensor_process, name="SensorReader", daemon=True,
+            args=(self._buf, self._lock, self._seq, self._ready, self._stop)
+        )
 
-        log.info("Lade Sensor-Firmware, das dauert einige Sekunden ...")
-        self._sensor.begin()
-        self._sensor.set_resolution(self.SIZE * self.SIZE)
-        self._sensor.set_ranging_frequency_hz(self.FREQUENCY_HZ)
-        self._sensor.start_ranging()
+    def start(self, timeout: float = 15.0):
+        """
+        Start the sensor process and wait for the ready event.
+        If it won't be ready within the timeout raise an exception.
+        """
 
-        self._lock = threading.Lock()
-        self._latest: SensorOutput | None = None
-        self._halt = threading.Event()
-        self.errors = 0
+        log.info("Starting sensor, loading firmware...")
+        self._process.start()
 
-    def _to_grid(self, values, dtype) -> np.ndarray:
-        n = self.SIZE * self.SIZE
-        grid = np.asarray(values[:n], dtype=dtype).reshape(self.SIZE, self.SIZE)
-        if self.FLIP_UD:
-            grid = np.flipud(grid)
-        if self.FLIP_LR:
-            grid = np.fliplr(grid)
-        return np.ascontiguousarray(grid)
+        if not self._ready.wait(timeout=timeout):
+            self.stop()
+            raise RuntimeError("Sensor not ready. Is it connected?")
 
-    def run(self):
-        while not self._halt.is_set():
-            try:
-                if self._sensor.check_data_ready():
-                    d = self._sensor.get_ranging_data()
-                    frame = SensorOutput(
-                        timestamp=time.monotonic(),
-                        dist=self._to_grid(d.distance_mm, np.int16),
-                        status=self._to_grid(d.target_status, np.uint8),
-                        sigma=self._to_grid(d.range_sigma_mm, np.uint16),
-                    )
-                    with self._lock:
-                        self._latest = frame
-                else:
-                    time.sleep(0.002)
-            except Exception:
-                # Ein Lesefehler darf den Thread nicht beenden
-                self.errors += 1
-                log.exception("Sensor-Lesefehler (#%d)", self.errors)
-                time.sleep(0.1)
 
     def latest(self) -> SensorOutput | None:
         """
         Get the latest frame from the sensor.
+        If the main process is faster than the sensor reading process, None will be returned sometimes.
         """
 
         with self._lock:
-            if self._latest is not None:
-                if (time.monotonic() - self._latest.timestamp) <= 0.2:
-                    return self._latest
+            if self._seq.value == self._last_seq:
+                return None
+            self._last_seq = self._seq.value
+            f = np.frombuffer(self._buf, dtype=_FRAME_DTYPE, count=1)[0].copy()
 
-        return None
+        if time.monotonic() - f["timestamp"] > 0.2:
+            return None
+
+        return SensorOutput(timestamp=float(f["timestamp"]),
+                            dist=f["dist"],
+                            status=f["status"],
+                            sigma=f["sigma"]
+        )
+
+
 
     def stop(self):
         """
-        Stop the sensor
+        Stop the sensor reading process.
         """
+        self._stop.set()
+        self._process.join(timeout=5)
 
-        self._halt.set()
-        self.join(timeout=1.0)
-        try:
-            self._sensor.stop_ranging()
-        except Exception:
-            log.exception("stop_ranging fehlgeschlagen")
+        # If the process has not finished after the timeout,
+        # force the cancellation.
+        if self._process.is_alive():
+            self._process.terminate()
