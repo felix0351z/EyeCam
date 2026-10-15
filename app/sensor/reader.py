@@ -14,6 +14,9 @@ FREQUENCY_HZ = 15
 FLIP_UD = False
 FLIP_LR = False
 
+# Frames older than this are treated as missing (e.g. sensor process crashed)
+MAX_AGE_S = 0.2
+
 # numpy dtype structure for a shared-memory buffer
 _FRAME_DTYPE = np.dtype([
     ("timestamp", np.float64),
@@ -31,7 +34,7 @@ def _to_grid(values, dtype) -> np.ndarray:
         grid = np.fliplr(grid)
     return grid
 
-def _start_sensor_process(buf, lock, seq, ready, stop):
+def _start_sensor_process(buf, lock, ready, stop):
     """
     Start a new process to read data from the sensor.
     """
@@ -63,7 +66,6 @@ def _start_sensor_process(buf, lock, seq, ready, stop):
                     frame["dist"] = _to_grid(d.distance_mm, np.int16)
                     frame["status"] = _to_grid(d.target_status, np.uint8)
                     frame["sigma"] = _to_grid(d.range_sigma_mm, np.uint16)
-                    seq.value+=1
             except Exception:
                 log.exception("Sensor reading failed")
                 time.sleep(1)
@@ -80,14 +82,12 @@ class SensorReader:
         ctx = mp.get_context("spawn")
         self._buf = ctx.RawArray("B", _FRAME_DTYPE.itemsize)
         self._lock = ctx.Lock()
-        self._seq = ctx.RawValue("Q", 0)
         self._ready = ctx.Event()
         self._stop = ctx.Event()
 
-        self._last_seq = 0
         self._process = ctx.Process(
             target=_start_sensor_process, name="SensorReader", daemon=True,
-            args=(self._buf, self._lock, self._seq, self._ready, self._stop)
+            args=(self._buf, self._lock, self._ready, self._stop)
         )
 
     def start(self, timeout: float = 15.0):
@@ -107,16 +107,14 @@ class SensorReader:
     def latest(self) -> SensorOutput | None:
         """
         Get the latest frame from the sensor.
-        If the main process is faster than the sensor reading process, None will be returned sometimes.
+        Returns None if there is no frame younger than MAX_AGE_S.
         """
 
         with self._lock:
-            if self._seq.value == self._last_seq:
-                return None
-            self._last_seq = self._seq.value
             f = np.frombuffer(self._buf, dtype=_FRAME_DTYPE, count=1)[0].copy()
 
-        if time.monotonic() - f["timestamp"] > 0.2:
+        # Before the first frame the timestamp is 0.0, so this also returns None
+        if time.monotonic() - f["timestamp"] > MAX_AGE_S:
             return None
 
         return SensorOutput(timestamp=float(f["timestamp"]),
