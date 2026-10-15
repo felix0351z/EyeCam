@@ -22,12 +22,13 @@
       <div class="hero">
         <div class="container">
           <div class="hero-title">
-            <h1>Haptische Hinderniswarnung für unterwegs.</h1>
+            <h1>Haptische Hinderniswarnung für unterwegs</h1>
             <img src="Pictures/eye_cam.png" class="logo" alt="logo">
           </div>
           <p class="lede">
-            Die auf Brusthöhe montierte Raspberry Pi Camera Module 3 erkennt Hindernisse in der Umgebung und sendet Signale an zwei Armbänder, um dem Nutzer die Richtung zum Ausweichen anzuzeigen (links oder rechts). Die Kamera ist mit einem Raspberry Pi verbunden, auf dem die Bildverarbeitung durchgeführt wird. Für die Armbänder werden Arduino-Nano-Module in Kombination mit Vibrationsmotoren verwendet, um haptisches Feedback zu erzeugen. Zusätzlich ist der Einsatz von Ultraschallsensoren geplant, um mögliche Ungenauigkeiten bei der Distanzmessung der Kamera zu verbessern. Für die Hinderniserkennung wird OpenCV verwendet.
+            Das auf Brusthöhe montierte Raspberry Pi Camera Module 3 erkennt Hindernisse in der Umgebung und sendet Signale an zwei Armbänder, um Nutzenden die Ausweichrichtung anzuzeigen (links oder rechts). Die Kamera ist mit einem Raspberry Pi verbunden, auf dem die Bildverarbeitung durchgeführt wird. Für die Armbänder werden ESP32-C3 Super Mini in Kombination mit Vibrationsmotoren verwendet, um haptisches Feedback zu erzeugen. Zusätzlich ist der Einsatz eines Sensors geplant, um mögliche Ungenauigkeiten bei der Distanzmessung der Kamera auszugleichen. Für die Hinderniserkennung wird OpenCV und YOLO verwendet.
           </p>
+          <img src="Pictures/code.jpg" class="image" style="width: 50%;" alt="code">
         </div>
       </div>
     </section>
@@ -35,10 +36,11 @@
     <section class="page" data-step="2" id="überblick">
       <div class="hero">
         <div class="container">
-          <h2>Wie das System funktioniert</h2>
-          <p class="placeholder">
-            <img src="Pictures/pi.jpg" class="image" style="width: 50%; height: auto;" alt="Raspberry Pi">
-          </p>
+          <h2>Funktionsweise des Systems</h2>
+            <div style="display: flex; gap: 16px; align-items: flex-start;">
+              <img src="Pictures/example.jpg" class="image" style="width: 50%; height: auto; object-fit: contain;" alt="example">
+              <img src="Pictures/pi.jpg" class="image" style="width: 51.5%; height: auto; object-fit: contain;" alt="Raspi">
+            </div>
 
           <div class="flow">
             <div class="flow-step">
@@ -46,7 +48,6 @@
               <p>
                 Eine am Körper getragene Kamera erfasst laufend die Umgebung und
                 erkennt Hindernisse per Bildverarbeitung.
-                [Platzhalter: genutzte Hardware/Software ergaenzen, z. B. Raspberry Pi + YOLO]
               </p>
             </div>
             <div class="flow-step">
@@ -54,14 +55,14 @@
               <p>
                 Sobald ein Hindernis erkannt wird, sendet das Gerät ein Signal per
                 Bluetooth Low Energy (BLE) an eines von zwei Armbändern —
-                je nachdem, auf welcher Seite ausgewichen werden soll.
+                je nachdem, auf welche Seite ausgewichen werden soll.
               </p>
             </div>
             <div class="flow-step">
               <h3>Spüren</h3>
               <p>
                 Das Armband gibt eine haptische Rückmeldung (Vibration), die
-                anzeigt: ein paar Schritte nach links oder rechts ausweichen.
+                anzeigt, ob ein paar Schritte nach links oder rechts ausgewichen werden soll.
               </p>
             </div>
           </div>
@@ -74,11 +75,11 @@
         <div class="container two-col">
           <div>
             <h2>Warum dieses Projekt?</h2>
-            <p>
+            <p class="lede">
               Laut <a href="https://www.who.int/news-room/fact-sheets/detail/blindness-and-visual-impairment" target="_blank" rel="noopener noreferrer">WHO</a>
-              haben weltweit mindestens 2,2 Milliarden Menschen eine Seheinschränkung. Hilfsmittel, die ihnen im Alltag helfen, sind oft sehr teuer:
+              haben weltweit mindestens 2,2 Milliarden Menschen eine Seheinschränkung. Hilfsmittel, die sie im Alltag unterstützen, sind oft sehr teuer:
               Je nach System liegen die Kosten schätzungsweise zwischen 1.000 und 10.000 €.
-              Genau hier setzt EyeCam an. Das System ist klein, alltagstauglich und deutlich günstiger, sodass es für mehr Menschen erschwinglich wird.
+              Genau hier setzt EyeCam an. Das System ist klein, alltagstauglich und deutlich günstiger, sodass es für viele Menschen erschwinglich wird.
             </p>
             <img src="Pictures/who_logo.svg" class="image" style="width: 50%; height: auto; background: var(--navy);" alt="who">
           </div>
@@ -86,11 +87,11 @@
           <div>
             <h2>Auf einen Blick</h2>
             <table class="spec">
-              <tr><th>Mikrocontroller</th><td>2x ESP32-C3</td></tr>
+              <tr><th>Mikrocontroller</th><td>2x ESP32-C3 Super Mini</td></tr>
               <tr><th>Kamera/Recheneinheit</th><td>Raspberry Pi 5 mit Cam Module 3</td></tr>
               <tr><th>Kommunikation</th><td>Bluetooth Low Energy (BLE)</td></tr>
               <tr><th>Feedback</th><td>Haptisch (Vibrationsmotor)</td></tr>
-              <tr><th>Status</th><td>Fertiges Prototyp</td></tr>
+              <tr><th>Status</th><td>Fertiger Prototyp</td></tr>
             </table>
           </div>
         </div>
@@ -101,48 +102,71 @@
       <div class="hero" style="padding-bottom: 32px;">
         <div class="container">
           <h1>Wer wir sind</h1>
-          <p class="lede">
-            Wir sind die Auszubildenden des Universitätsklinikums Freiburg.
+          <p class="lede" style="max-width: 90%;">
+            Wir sind Informatik-Auszubildende des Universitätsklinikums Freiburg in den Bereichen Systemintegration und Anwendungsentwicklung.
           </p>
 
           <div class="team-grid">
+
             <div class="stack">
               <div class="team-card">
-                <img src="Pictures/bonheur.jpg" class="image">
+                <img src="Pictures/bonheur.jpg" class="image" alt="Bonheur Rebayesu">
                 <h3>Bonheur Rebayesu</h3>
-                <div class="role">VL53L5CX Sensor setup und embedded engineering</div>
-                <p>
-                  <a href="mailto:bonheur.rebayesu@uniklinik-freiburg.de">Email</a>
-                  </br>
-                  <a href="https://www.linkedin.com/in/bonheur-rebayesu-b98140359" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-                </p>
+                <div class="role">Embedded Systems Ingenieurin</div>
+                <div class="tasks">Inbetriebnahme des VL53L5CX-Distanzsensors und Aufbereitung der Messwerte für die Hinderniserkennung</div>
+                <div class="socials">
+                  <div class="social">
+                    <a href="mailto:bonheur.rebayesu@uniklinik-freiburg.de"><img src="Pictures/mail.png" class="icon" alt="E-Mail"></a>
+                    <img src="Pictures/qr_bonheur_mail.png" class="qr" alt="QR-Code E-Mail">
+                  </div>
+                  <div class="social">
+                    <a href="https://www.linkedin.com/in/bonheur-rebayesu-b98140359" target="_blank" rel="noopener noreferrer"><img src="Pictures/in.png" class="icon" alt="LinkedIn"></a>
+                    <img src="Pictures/qr_bonheur_linkedin.png" class="qr" alt="QR-Code LinkedIn">
+                  </div>
+                </div>
               </div>
             </div>
 
             <div class="stack">
               <div class="team-card">
-                <img src="Pictures/felix.jpg" class="image">
+                <img src="Pictures/felix1.jpg" class="image" alt="Felix Zimmerman">
                 <h3>Felix Zimmerman</h3>
-                <div class="role">Softwareentwicklung</div>
-                <p>
-                  <a href="mailto:felix.zimmermann@uniklinik-freiburg.de">Email</a>
-                  </br>
-                </p>
+                <div class="role">Softwareentwickler</div>
+                <div class="tasks">Softwareentwicklung für Bildverarbeitung und für die Analyser-App zur Hinderniserkennung</div>
+                <div class="socials">
+                  <div class="social">
+                    <a href="mailto:felix.zimmermann@uniklinik-freiburg.de"><img src="Pictures/mail.png" class="icon" alt="E-Mail"></a>
+                    <img src="Pictures/qr_felix_mail.png" class="qr" alt="QR-Code E-Mail">
+                  </div>
+                  <div class="social">
+                    <a href="https://github.com/felix0351z" target="_blank" rel="noopener noreferrer"><img src="Pictures/github.png" class="icon" alt="GitHub"></a>
+                    <img src="Pictures/qr_felix_github.png" class="qr" alt="QR-Code GitHub">
+                  </div>
+                </div>
               </div>
             </div>
+
             <div class="stack">
               <div class="team-card">
-                <img src="Pictures/anna.jpg" class="image">
+                <img src="Pictures/anna.jpg" class="image" alt="Anna Piven">
                 <h3>Anna Piven</h3>
-                <div class="role">Armbänder design und embedded engineering</div>
-                <p>
-                  <a href="mailto:anna.piven@uniklinik-freiburg.de">Email</a>
-                  </br>
-                  <a href="https://www.linkedin.com/in/anna-piven-444b62160" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-                </p>
+                <div class="role">Embedded Systems Ingenieurin</div>
+                <div class="tasks">Armband-Design, ESP32-C3-Programmierung der Vibrationsmotoren und Webseiteentwicklung</div>
+                <div class="socials">
+                  <div class="social">
+                    <a href="mailto:anna.piven@uniklinik-freiburg.de"><img src="Pictures/mail.png" class="icon" alt="E-Mail"></a>
+                    <img src="Pictures/qr_anna_mail.png" class="qr" alt="QR-Code E-Mail">
+                  </div>
+                  <div class="social">
+                    <a href="https://www.linkedin.com/in/anna-piven-444b62160" target="_blank" rel="noopener noreferrer"><img src="Pictures/in.png" class="icon" alt="LinkedIn"></a>
+                    <img src="Pictures/qr_anna_linkedin.png" class="qr" alt="QR-Code LinkedIn">
+                  </div>
+                </div>
               </div>
             </div>
+
           </div>
+
         </div>
       </div>
     </section>
@@ -151,11 +175,11 @@
       <div class="hero">
         <div class="container">
           <div>
-            <h2>Danksagung</h2>
+            <h1>Danksagung</h1>
             <p class="lede" style="width: 60%;">
               Wir danken unseren Ausbilder*innen und Lehrkräften für ihre fachliche Begleitung, den
               Erfahrungsaustausch, die Unterstützung mit Material und das Vertrauen in unser Projekt.
-              Der Schule danken wir für die Gelegenheit, EyeCam auf der Hausmesse zu präsentieren.
+              Der Walther-Rathenau-Gewerbeschule danken wir für die Gelegenheit, EyeCam auf der Hausmesse präsentieren zu dürfen.
             </p>
             <img src="Pictures/together.jpg" class="image" style="width: 30%; height: auto;" alt="Teamfoto">
           </div>

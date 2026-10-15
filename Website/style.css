@@ -265,7 +265,7 @@ img {
 }
 
 .team-card {
-  aspect-ratio: 3 / 3.6;
+  /* aspect-ratio: 3 / 3.6; */
   display: flex;
   flex-direction: column;
   border: 2px solid var(--black);
@@ -299,16 +299,60 @@ img {
   color: var(--ink);
 }
 
-.team-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(43, 76, 111, 0.08);
-}
-
 .team-card .role {
   color: var(--steel);
   font-size: 0.88rem;
   margin-bottom: 10px;
-  height: 2.6em;
+}
+
+.team-card .tasks {
+  color: var(--black);
+  font-size: 0.88rem;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.team-card .image {
+  height: auto;
+  aspect-ratio: 1 / 1;
+  margin-bottom: 12px;
+}
+
+.socials {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.social {
+  flex: 1;
+  max-width: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.social a {
+  display: block;
+  width: 36px;
+}
+
+.social .icon {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.social .qr {
+  width: 70%;
+  max-width: 96px;
+  height: auto;
+  background: #fff;
+  padding: 4px;
+  border: 1px solid var(--line);
 }
 
 /* ---------- Spec table ---------- */
@@ -348,7 +392,7 @@ table.spec th {
 /* ---------- Footer ---------- */
 
 footer {
-  padding: 28px 0 40px;
+
   color: var(--gray);
   font-size: 0.88rem;
 }
@@ -382,7 +426,7 @@ footer {
   display: none;
   animation: page-in 0.3s ease;
   position: relative;
-  height: 80vh;
+  height: 85vh;
   overflow-y: auto;
   animation: page-in 0.3s ease;
 }

@@ -1,6 +1,7 @@
-// Karten-Navigation: zeigt jeweils nur eine .page an und schaltet per
-// Weiter/Zurueck-Button oder Klick auf einen Punkt um.
-(function stepper() {
+// Pages Navigation
+// Left/right buttons
+
+(  function stepper() {
   const pages = Array.from(document.querySelectorAll('.page'));
   const prevBtn = document.getElementById('prevBtn');
   const nextBtn = document.getElementById('nextBtn');
