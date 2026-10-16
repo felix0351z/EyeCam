@@ -63,7 +63,9 @@ def _start_sensor_process(buf, lock, ready, stop):
                 d = sensor.get_ranging_data()
                 with lock:
                     frame["timestamp"] = t
-                    frame["dist"] = _to_grid(d.distance_mm, np.int16)
+                    # qwiic_vl53l5cx omits the "/ 4" conversion of the ST driver:
+                    # raw distances are in 1/4 mm
+                    frame["dist"] = _to_grid(d.distance_mm, np.int16) // 4
                     frame["status"] = _to_grid(d.target_status, np.uint8)
                     frame["sigma"] = _to_grid(d.range_sigma_mm, np.uint16)
             except Exception:
