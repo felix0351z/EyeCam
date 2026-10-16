@@ -9,12 +9,18 @@ DESCRIPTOR: _descriptor.FileDescriptor
 
 class GraphLabel(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
-    ZONE_LEFT: _ClassVar[GraphLabel]
-    ZONE_MIDDLE: _ClassVar[GraphLabel]
-    ZONE_RIGHT: _ClassVar[GraphLabel]
-ZONE_LEFT: GraphLabel
-ZONE_MIDDLE: GraphLabel
-ZONE_RIGHT: GraphLabel
+    YOLO_LEFT: _ClassVar[GraphLabel]
+    YOLO_MIDDLE: _ClassVar[GraphLabel]
+    YOLO_RIGHT: _ClassVar[GraphLabel]
+    SENSOR_LEFT: _ClassVar[GraphLabel]
+    SENSOR_MIDDLE: _ClassVar[GraphLabel]
+    SENSOR_RIGHT: _ClassVar[GraphLabel]
+YOLO_LEFT: GraphLabel
+YOLO_MIDDLE: GraphLabel
+YOLO_RIGHT: GraphLabel
+SENSOR_LEFT: GraphLabel
+SENSOR_MIDDLE: GraphLabel
+SENSOR_RIGHT: GraphLabel
 
 class YoloPacket(_message.Message):
     __slots__ = ("frame_id", "timestamp_ms", "jpeg_bytes", "confidences", "class_ids", "boxes")

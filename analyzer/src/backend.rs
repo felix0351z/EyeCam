@@ -1,4 +1,4 @@
-use crate::backend::protocol::{GraphMessage, GraphValue, SensorMessage, YoloMessage};
+use crate::backend::protocol::{GraphMessage, GraphSource, GraphValue, SensorMessage, YoloMessage, Zone};
 use crossbeam_channel::Sender;
 use prost::Message;
 use std::error::Error;
@@ -150,10 +150,28 @@ pub mod protocol {
         pub graphs: Vec<GraphValue>
     }
 
+    /// Geglätteter Gefahrenwert (0-1) einer Zone der ZoneDetection.
     #[derive(Copy, Clone, PartialEq)]
     pub struct GraphValue {
-        pub name: i32,
+        pub source: GraphSource,
+        pub zone: Zone,
         pub value: f32,
+    }
+
+    /// Quelle, aus welcher der Gefahrenwert berechnet wurde.
+    #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+    pub enum GraphSource {
+        Yolo,
+        Sensor,
+    }
+
+    /// Zone der ZoneDetection.
+    /// Der Wert entspricht dem Index (links nach rechts).
+    #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+    pub enum Zone {
+        Left = 0,
+        Middle = 1,
+        Right = 2,
     }
 }
 
@@ -171,17 +189,27 @@ impl std::fmt::Display for NoPayloadError {
 
 /// Implementationen der Traits
 /// für die Konvertierung zwischen API und dem Channel Protokoll.
-impl From<api::GraphValue> for GraphValue {
-    fn from(value: api::GraphValue) -> Self {
-        GraphValue { name: value.name, value: value.value, }
+impl TryFrom<api::GraphValue> for GraphValue {
+    type Error = prost::UnknownEnumValue;
+    fn try_from(value: api::GraphValue) -> Result<Self, Self::Error> {
+        let (source, zone) = match api::GraphLabel::try_from(value.name)? {
+            api::GraphLabel::YoloLeft => (GraphSource::Yolo, Zone::Left),
+            api::GraphLabel::YoloMiddle => (GraphSource::Yolo, Zone::Middle),
+            api::GraphLabel::YoloRight => (GraphSource::Yolo, Zone::Right),
+            api::GraphLabel::SensorLeft => (GraphSource::Sensor, Zone::Left),
+            api::GraphLabel::SensorMiddle => (GraphSource::Sensor, Zone::Middle),
+            api::GraphLabel::SensorRight => (GraphSource::Sensor, Zone::Right),
+        };
+        Ok(GraphValue { source, zone, value: value.value })
     }
 }
 impl From<api::GraphPacket> for GraphMessage {
     fn from(value: api::GraphPacket) -> Self {
         GraphMessage {
             frame_id: value.frame_id,
+            // Unbekannte Labels (z.B. neuere Proto-Version auf der EyeCam) werden verworfen.
             graphs: value.graphs.into_iter()
-                .map(GraphValue::from)
+                .filter_map(|graph| GraphValue::try_from(graph).ok())
                 .collect(),
         }
     }

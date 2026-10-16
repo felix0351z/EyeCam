@@ -98,7 +98,8 @@ def main():
                     sender.send_sensor_packet(sensor_frame)
 
             # 3. Detection algorithm
-            detection_algorithm.calculate(yolo_output, sensor_frame)
+            danger_values = detection_algorithm.calculate(yolo_output, sensor_frame)
+            sender.send_graph_packet(danger_values)
 
             # 4. Measure fps and print out every second
             frames += 1

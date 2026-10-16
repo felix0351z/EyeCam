@@ -17,10 +17,14 @@ message SensorPacket {
 }
 
 
+// Geglättete Gefahrenwerte (0-1) der ZoneDetection, getrennt nach Quelle und Zone
 enum GraphLabel {
-  ZONE_LEFT = 0;
-  ZONE_MIDDLE = 1;
-  ZONE_RIGHT = 2;
+  YOLO_LEFT = 0;
+  YOLO_MIDDLE = 1;
+  YOLO_RIGHT = 2;
+  SENSOR_LEFT = 3;
+  SENSOR_MIDDLE = 4;
+  SENSOR_RIGHT = 5;
 }
 
 message GraphValue {

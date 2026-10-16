@@ -1,4 +1,5 @@
 pub mod camera;
+pub mod graph;
 pub mod sensor2d;
 
 use bevy::camera::{CameraOutputMode, Hdr, ScalingMode, Viewport};
@@ -15,6 +16,7 @@ impl Plugin for ViewPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<ViewRects>()
+            .init_resource::<UiState>()
             .add_systems(Startup, setup)
             .add_systems(EguiPrimaryContextPass, (ui_layout, update_viewports));
     }
@@ -39,6 +41,13 @@ impl Default for ViewRects {
             view_sensor: egui::Rect::ZERO,
         }
     }
+}
+
+/// Zustand der Elemente im Fenster "Steuerung".
+#[derive(Resource, Default)]
+pub struct UiState {
+    /// Zeige das Fenster mit dem Plot der Gefahrenwerte (`view::graph`).
+    pub show_graph: bool,
 }
 
 /// Bevy-Kamera für die linke Seite des Fensters,
@@ -119,6 +128,7 @@ fn setup(mut commands: Commands, mut egui_settings: ResMut<EguiGlobalSettings>) 
 fn ui_layout(
     mut contexts: EguiContexts,
     mut rects: ResMut<ViewRects>,
+    mut ui_state: ResMut<UiState>,
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
 
@@ -135,6 +145,7 @@ fn ui_layout(
         .resizable(true)
         .frame(egui::Frame::window(root_ui.style()))
         .show(&mut root_ui, |ui| {
+            ui.checkbox(&mut ui_state.show_graph, "Gefahrenwerte anzeigen");
 
             let rect = ui.available_rect_before_wrap();
             ui.allocate_rect(rect, egui::Sense::hover());

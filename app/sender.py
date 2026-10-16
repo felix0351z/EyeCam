@@ -6,6 +6,7 @@ import numpy as np
 import simplejpeg
 
 from api import packets_pb2
+from detection.classes import DangerValues
 from sensor.classes import SensorOutput
 from yolo.classes import YOLOOutput
 
@@ -59,6 +60,26 @@ class Sender:
                 target_status=np.ascontiguousarray(data.status, dtype='<u1').tobytes(),
                 range_sigma_mm=np.ascontiguousarray(data.sigma, dtype='<u2').tobytes(),
             )
+        )
+
+        self._send(packet)
+
+    def send_graph_packet(self, data: DangerValues):
+        if self.closed:
+            return
+
+        # Labels in the order [left, middle, right], like the danger arrays
+        yolo_labels = (packets_pb2.YOLO_LEFT, packets_pb2.YOLO_MIDDLE, packets_pb2.YOLO_RIGHT)
+        sensor_labels = (packets_pb2.SENSOR_LEFT, packets_pb2.SENSOR_MIDDLE, packets_pb2.SENSOR_RIGHT)
+
+        graphs = [
+            packets_pb2.GraphValue(name=label, value=float(value))
+            for labels, values in ((yolo_labels, data.yolo), (sensor_labels, data.sensor))
+            for label, value in zip(labels, values)
+        ]
+
+        packet = packets_pb2.Packet(
+            graph=packets_pb2.GraphPacket(frame_id=0, graphs=graphs)
         )
 
         self._send(packet)
