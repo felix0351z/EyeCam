@@ -26,7 +26,8 @@
             <img src="Pictures/eye_cam.png" class="logo" alt="logo">
           </div>
           <p class="lede">
-            Das auf Brusthöhe montierte Raspberry Pi Camera Module 3 erkennt Hindernisse in der Umgebung und sendet Signale an zwei Armbänder, um Nutzenden die Ausweichrichtung anzuzeigen (links oder rechts). Die Kamera ist mit einem Raspberry Pi verbunden, auf dem die Bildverarbeitung durchgeführt wird. Für die Armbänder werden ESP32-C3 Super Mini in Kombination mit Vibrationsmotoren verwendet, um haptisches Feedback zu erzeugen. Zusätzlich ist der Einsatz eines Sensors geplant, um mögliche Ungenauigkeiten bei der Distanzmessung der Kamera auszugleichen. Für die Hinderniserkennung wird OpenCV und YOLO verwendet.
+            Das auf Brusthöhe montierte Raspberry Pi Camera Module 3 erkennt Hindernisse in der Umgebung und sendet Signale an zwei Armbänder, um Nutzenden die Ausweichrichtung anzuzeigen (links oder rechts). Die Kamera ist mit einem Raspberry Pi verbunden, auf dem die Bildverarbeitung durchgeführt wird. Für die Armbänder werden ESP32-C3 Super Mini in Kombination mit Vibrationsmotoren verwendet, um haptisches Feedback zu erzeugen. Zusätzlich wird ein Time-of-Flight (ToF) Sensor eingesetzt, um die Schwächen einer reinen bildbasierten Objekterkennung auszugleichen. Das KI-Modell YOLOv26 von Ultralytics wird zur Hindernisserkennung verwendet.
+
           </p>
           <img src="Pictures/code.jpg" class="image" style="width: 50%;" alt="code">
         </div>
