@@ -1,0 +1,42 @@
+syntax = "proto3";
+package packets;
+
+message YoloPacket {
+  uint64 frame_id = 1;
+  uint64 timestamp_ms = 2;
+  bytes jpeg_bytes = 3;
+  bytes confidences = 4;
+  bytes class_ids = 5;
+  bytes boxes = 6;
+}
+
+message SensorPacket {
+  bytes distance_mm = 1;      // int16,  little endian, 64 Werte (8x8, Zeile für Zeile)
+  bytes target_status = 2;    // uint8,  64 Werte
+  bytes range_sigma_mm = 3;   // uint16, little endian, 64 Werte
+}
+
+
+enum GraphLabel {
+  ZONE_LEFT = 0;
+  ZONE_MIDDLE = 1;
+  ZONE_RIGHT = 2;
+}
+
+message GraphValue {
+  GraphLabel name = 1;
+  float value = 2;
+}
+
+message GraphPacket {
+  uint64 frame_id = 1;
+  repeated GraphValue graphs = 2;
+}
+
+message Packet {
+  oneof payload {
+    YoloPacket yolo = 1;
+    SensorPacket sensor = 2;
+    GraphPacket graph = 3;
+  }
+}

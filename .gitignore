@@ -5,3 +5,5 @@
 
 # Rust
 target/
+
+**/__pycache__/
