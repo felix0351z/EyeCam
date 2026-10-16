@@ -20,7 +20,7 @@ class Sender:
         self.closed = False
 
         try:
-            self.socket.connect(("192.168.178.100", 6969))
+            self.socket.connect(("192.168.178.79", 6969))
         except socket.error:
             print("Failed to connect to analyzer")
             self.socket.close()
