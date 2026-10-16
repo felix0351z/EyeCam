@@ -47,7 +47,7 @@ fn show_graph_window(
     // Über das Schließen-Kreuz wird auch die Checkbox in der Steuerung zurückgesetzt.
     egui::Window::new("Gefahrenwerte")
         .open(&mut ui_state.show_graph)
-        .default_size([600.0, 300.0])
+        .default_size([1200.0, 600.0])
         .show(ctx, |ui| {
             Plot::new("danger_plot")
                 .legend(Legend::default())
