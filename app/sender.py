@@ -1,5 +1,8 @@
+import logging
+import queue
 import socket
 import struct
+import threading
 import time
 
 import numpy as np
@@ -10,31 +13,68 @@ from detection.classes import DangerValues
 from sensor.classes import SensorOutput
 from yolo.classes import YOLOOutput
 
+log = logging.getLogger(__name__)
+LISTEN_ADDRESS = ("0.0.0.0", 6969)
+SEND_TIMEOUT = 2.0 # seconds
 
 def _encode_jpeg(image: np.ndarray):
     return simplejpeg.encode_jpeg(image, quality=80, colorspace="BGR")
 
 class Sender:
+    """
+    Create a server for an analyzer connection.
+    The server sends packets to the analyzer in a background thread.
+
+    If the analyzer is not connected, packets are dropped. A lost connection is
+    re-established automatically.
+    """
 
     def __init__(self):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.closed = False
+        self._queue = queue.Queue(maxsize=10)
+        self._connected = threading.Event()
+        threading.Thread(target=self._run, name="Sender", daemon=True).start()
 
-        try:
-            self.socket.connect(("192.168.178.100", 6969))
-        except socket.error:
-            print("Failed to connect to analyzer")
-            self.socket.close()
-            self.closed = True
+    def _run(self):
+        server = socket.create_server(LISTEN_ADDRESS)
+        log.info("Waiting for analyzer on port %d", LISTEN_ADDRESS[1])
+
+        while True:
+            sock, address = server.accept()
+            sock.settimeout(SEND_TIMEOUT)
+            self._clear_queue()
+            self._connected.set()
+            log.info("Analyzer connected from %s", address[0])
+
+            try:
+                while True:
+                    sock.sendall(self._queue.get())
+            except OSError as e:
+                log.info("Analyzer disconnected (%s)", e)
+            finally:
+                self._connected.clear()
+                sock.close()
+
+    @property
+    def connected(self):
+        return self._connected.is_set()
+
+    def _clear_queue(self):
+        while not self._queue.empty():
+            self._queue.get_nowait()
 
 
     def _send(self, packet: packets_pb2.Packet):
         payload = packet.SerializeToString()
-        self.socket.sendall(struct.pack("!I", len(payload)) + payload)  # 4 Byte Länge (Big Endian)
 
+        try:
+            # 4 byte length prefix (big endian) + protobuf payload
+            self._queue.put_nowait(struct.pack("!I", len(payload)) + payload)
+        except queue.Full:
+            # Analyzer too slow, drop packet
+            pass
 
     def send_yolo_packet(self, data: YOLOOutput):
-        if self.closed:
+        if not self.connected:
             return
 
         packet = packets_pb2.Packet(
@@ -51,7 +91,7 @@ class Sender:
         self._send(packet)
 
     def send_sensor_packet(self, data: SensorOutput):
-        if self.closed:
+        if not self.connected:
             return
 
         packet = packets_pb2.Packet(
@@ -65,7 +105,7 @@ class Sender:
         self._send(packet)
 
     def send_graph_packet(self, data: DangerValues):
-        if self.closed:
+        if not self.connected:
             return
 
         # Labels in the order [left, middle, right], like the danger arrays

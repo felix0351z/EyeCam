@@ -3,47 +3,42 @@ use crossbeam_channel::Sender;
 use prost::Message;
 use std::error::Error;
 use std::io::{BufReader, Read};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::net::TcpStream;
+use std::time::Duration;
 use zune_jpeg::JpegDecoder;
 use zune_jpeg::zune_core::bytestream::ZCursor;
 // --------------------------------------
 // Einstiegspunkt
 // --------------------------------------
+const EYECAM_ADDRESS: &str = "eyecam.local:6969";
+const RETRY_INTERVAL: Duration = Duration::from_secs(2);
+const READ_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Spawne einen neuen Thread um Daten vom EyeCam-Gerät zu empfangen
 pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>) {
     std::thread::spawn(move || {
+        loop {
+            let Ok(stream) = TcpStream::connect(EYECAM_ADDRESS) else {
+                std::thread::sleep(RETRY_INTERVAL);
+                continue;
+            };
+            stream.set_read_timeout(Some(READ_TIMEOUT)).ok();
 
-        let local_ip = local_ip_address::local_ip()
-            .expect("Unable to get local IP address");
-        println!("Local IP: {}", local_ip);
-        let socket = SocketAddr::new(local_ip, 6969);
+            if let Ok(peer_ip) = stream.peer_addr() {
+                println!("Connected to EyeCam device on ip {}", peer_ip);
+            }
 
-        let listener = TcpListener::bind(socket).expect("Unable to bind TCP listener");
-        for stream in listener.incoming() {
-            // Get the stream and open a new buffer reader
-            let stream = stream.unwrap();
             let mut buf_reader = BufReader::new(&stream);
-            println!("Connection established!");
-
-            loop {
-                let packet = read_packet_from_buffer(&mut buf_reader);
-
-                match packet {
-                    Ok(packet) => {
-                        // Send a new message through the channel if a payload is available.
-                        if let Some(msg) = packet.try_into().ok() {
-                            if tx.send(msg).is_err() {
-                                break;
-                            }
-                        }
-                    },
-                    Err(_) => {
-                        eprintln!("Connection closed. Waiting for new connections...");
-                        break;
-                    },
+            while let Ok(packet) = read_packet_from_buffer(&mut buf_reader) {
+                // Send a new message through the channel if a payload is available.
+                if let Ok(msg) = packet.try_into() {
+                    if tx.send(msg).is_err() {
+                        return;
+                    }
                 }
             }
+
+            eprintln!("Connection closed. Reconnecting...");
         }
     });
 }
