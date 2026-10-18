@@ -49,6 +49,7 @@ def _start_sensor_process(buf, lock, ready, stop):
     sensor.begin()
     sensor.set_resolution(GRID_SIZE)
     sensor.set_ranging_frequency_hz(FREQUENCY_HZ)
+    sensor.set_integration_time_ms(20)
     sensor.start_ranging()
     ready.set()
 
