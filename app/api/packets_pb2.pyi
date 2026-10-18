@@ -64,12 +64,26 @@ class GraphPacket(_message.Message):
     graphs: _containers.RepeatedCompositeFieldContainer[GraphValue]
     def __init__(self, frame_id: _Optional[int] = ..., graphs: _Optional[_Iterable[_Union[GraphValue, _Mapping]]] = ...) -> None: ...
 
+class StatusPacket(_message.Message):
+    __slots__ = ("running",)
+    RUNNING_FIELD_NUMBER: _ClassVar[int]
+    running: bool
+    def __init__(self, running: _Optional[bool] = ...) -> None: ...
+
 class Packet(_message.Message):
-    __slots__ = ("yolo", "sensor", "graph")
+    __slots__ = ("yolo", "sensor", "graph", "status")
     YOLO_FIELD_NUMBER: _ClassVar[int]
     SENSOR_FIELD_NUMBER: _ClassVar[int]
     GRAPH_FIELD_NUMBER: _ClassVar[int]
+    STATUS_FIELD_NUMBER: _ClassVar[int]
     yolo: YoloPacket
     sensor: SensorPacket
     graph: GraphPacket
-    def __init__(self, yolo: _Optional[_Union[YoloPacket, _Mapping]] = ..., sensor: _Optional[_Union[SensorPacket, _Mapping]] = ..., graph: _Optional[_Union[GraphPacket, _Mapping]] = ...) -> None: ...
+    status: StatusPacket
+    def __init__(self, yolo: _Optional[_Union[YoloPacket, _Mapping]] = ..., sensor: _Optional[_Union[SensorPacket, _Mapping]] = ..., graph: _Optional[_Union[GraphPacket, _Mapping]] = ..., status: _Optional[_Union[StatusPacket, _Mapping]] = ...) -> None: ...
+
+class Command(_message.Message):
+    __slots__ = ("running",)
+    RUNNING_FIELD_NUMBER: _ClassVar[int]
+    running: bool
+    def __init__(self, running: _Optional[bool] = ...) -> None: ...

@@ -76,6 +76,10 @@ def main():
 
     try:
         while True:
+            # Paused by the analyzer
+            if not sender.running.wait(1):
+                continue
+
             frame = picam2.capture_array()
 
             # 1. Use YOLO and track the boxes

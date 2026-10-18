@@ -37,10 +37,21 @@ message GraphPacket {
   repeated GraphValue graphs = 2;
 }
 
+message StatusPacket {
+  bool running = 1;
+}
+
 message Packet {
   oneof payload {
     YoloPacket yolo = 1;
     SensorPacket sensor = 2;
     GraphPacket graph = 3;
+    StatusPacket status = 4;
+  }
+}
+
+message Command {
+  oneof payload {
+    bool running = 1;
   }
 }
