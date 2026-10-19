@@ -3,7 +3,7 @@ from bleak import BleakClient, BleakScanner
 
 CHAR_UUID = "12345678-1234-1234-1234-1234567890ac"
 TARGET_NAMES = {"OBSTACLE-L": "LEFT", "OBSTACLE-R": "RIGHT"}
-MOTOR_ON_MS = 500  # how long the motor stays on per trigger
+MOTOR_ON_MS = 1000  # how long the motor stays on per trigger
 
 async def find_and_connect():
     print("Scanning for ESP32 boards...")

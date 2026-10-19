@@ -52,8 +52,12 @@ def main():
     from detection.classes import MoveDirection
     from detection.zone_based import ZoneDetection
     from sender import Sender
+    from detection.buzz_motors import BuzzController
 
     sender = Sender()
+
+    buzz = BuzzController()
+    buzz.start()
 
     def on_detection(direction: MoveDirection):
         print(f"Move to {direction}!")
@@ -109,6 +113,7 @@ def main():
                 t_last = now
 
     finally:
+        buzz.stop()
         if sensor_reader is not None:
             sensor_reader.stop()
 
