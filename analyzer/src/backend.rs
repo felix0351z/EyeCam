@@ -1,9 +1,10 @@
-use crate::backend::protocol::{GraphMessage, GraphSource, GraphValue, SensorMessage, YoloMessage, Zone};
+use crate::backend::protocol::{GraphMessage, GraphSource, GraphValue, SensorMessage, StatusMessage, YoloMessage, Zone};
 use crossbeam_channel::Sender;
 use prost::Message;
 use std::error::Error;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use zune_jpeg::JpegDecoder;
 use zune_jpeg::zune_core::bytestream::ZCursor;
@@ -13,9 +14,14 @@ use zune_jpeg::zune_core::bytestream::ZCursor;
 const EYECAM_ADDRESS: &str = "eyecam.local:6969";
 const RETRY_INTERVAL: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(2);
+/// Befehle werden aus dem UI-Thread gesendet, dieser darf nicht lange blockieren.
+const WRITE_TIMEOUT: Duration = Duration::from_millis(100);
 
-/// Spawne einen neuen Thread um Daten vom EyeCam-Gerät zu empfangen
-pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>) {
+/// Spawne einen neuen Thread um Daten vom EyeCam-Gerät zu empfangen.
+///
+/// Während eine Verbindung besteht, wird ein zweites Handle auf den Socket
+/// in `control` hinterlegt, über welches die UI Befehle senden kann.
+pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>, control: EyeCamControl) {
     std::thread::spawn(move || {
         loop {
             let Ok(stream) = TcpStream::connect(EYECAM_ADDRESS) else {
@@ -23,6 +29,8 @@ pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>) {
                 continue;
             };
             stream.set_read_timeout(Some(READ_TIMEOUT)).ok();
+            stream.set_write_timeout(Some(WRITE_TIMEOUT)).ok();
+            control.set_stream(stream.try_clone().ok());
 
             if let Ok(peer_ip) = stream.peer_addr() {
                 println!("Connected to EyeCam device on ip {}", peer_ip);
@@ -38,9 +46,42 @@ pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>) {
                 }
             }
 
+            control.set_stream(None);
             eprintln!("Connection closed. Reconnecting...");
         }
     });
+}
+
+/// Schreibender Zugriff auf die aktuelle Verbindung zur EyeCam.
+///
+/// Der Empfangs-Thread setzt beim Verbinden ein zweites Handle auf den Socket
+/// und entfernt es beim Trennen. Die UI sendet darüber Befehle.
+#[derive(Clone, Default)]
+pub struct EyeCamControl(Arc<Mutex<Option<TcpStream>>>);
+
+impl EyeCamControl {
+    /// Starte oder pausiere die Verarbeitung auf der EyeCam.
+    pub fn set_running(&self, running: bool) {
+        self.send(api::Command {
+            payload: Some(api::command::Payload::Running(running)),
+        });
+    }
+
+    /// Sende einen Befehl mit 4 Byte Längenpräfix (Big Endian).
+    /// Fehler werden ignoriert, ein Verbindungsabbruch wird vom Empfangs-Thread erkannt.
+    fn send(&self, command: api::Command) {
+        let payload = command.encode_to_vec();
+        let mut frame = (payload.len() as u32).to_be_bytes().to_vec();
+        frame.extend_from_slice(&payload);
+
+        if let Some(stream) = self.0.lock().unwrap().as_mut() {
+            let _ = stream.write_all(&frame);
+        }
+    }
+
+    fn set_stream(&self, stream: Option<TcpStream>) {
+        *self.0.lock().unwrap() = stream;
+    }
 }
 
 // --------------------------------------
@@ -111,7 +152,14 @@ pub mod protocol {
     pub enum Message {
         Yolo(YoloMessage),
         Graph(GraphMessage),
-        Sensor(SensorMessage)
+        Sensor(SensorMessage),
+        Status(StatusMessage),
+    }
+
+    /// Zustand der EyeCam, wird regelmäßig als Heartbeat gesendet.
+    #[derive(Copy, Clone, PartialEq)]
+    pub struct StatusMessage {
+        pub running: bool,
     }
 
     #[derive(Clone, PartialEq)]
@@ -273,6 +321,9 @@ impl TryFrom<api::Packet> for protocol::Message {
             }
             api::packet::Payload::Sensor(packet) => {
                 Ok(protocol::Message::Sensor(SensorMessage::from(packet)))
+            }
+            api::packet::Payload::Status(packet) => {
+                Ok(protocol::Message::Status(StatusMessage { running: packet.running }))
             }
         }
     }

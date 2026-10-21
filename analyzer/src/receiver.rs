@@ -7,6 +7,9 @@ use crate::backend;
 /// Zeitraum in Sekunden, welcher in der `GraphHistory` gespeichert wird.
 pub const GRAPH_HISTORY_SECS: f64 = 10.0;
 
+/// Ohne Status-Paket (Heartbeat) innerhalb dieser Zeit gilt die EyeCam als nicht verbunden.
+const STATUS_TIMEOUT_SECS: f64 = 2.0;
+
 // --------------------------------------
 // Plugin Setup
 // --------------------------------------
@@ -17,6 +20,8 @@ impl Plugin for ReceiverPlugin {
             .init_resource::<LatestYoloMessage>()
             .init_resource::<LatestSensorMessage>()
             .init_resource::<GraphHistory>()
+            .init_resource::<EyeCamStatus>()
+            .init_resource::<EyeCamConnection>()
             .add_systems(Startup, setup)
             .add_systems(Update, receive_messages.in_set(ReceiveSet));
     }
@@ -75,20 +80,42 @@ impl GraphHistory {
 }
 
 
+/// Zuletzt von der EyeCam gemeldeter Zustand.
+#[derive(Resource, Default)]
+pub struct EyeCamStatus {
+    pub running: bool,
+    /// Empfangszeit des letzten Status-Pakets (s seit App-Start).
+    last_update: Option<f64>,
+}
+
+impl EyeCamStatus {
+    /// Verbunden, solange Status-Pakete (Heartbeats) ankommen.
+    pub fn connected(&self, now: f64) -> bool {
+        self.last_update.is_some_and(|time| now - time < STATUS_TIMEOUT_SECS)
+    }
+}
+
+/// Verbindung zum Senden von Befehlen an die EyeCam.
+#[derive(Resource, Default)]
+pub struct EyeCamConnection(pub backend::EyeCamControl);
+
+
 // --------------------------------------
 // Systeme und Hilfsfunktionen
 // --------------------------------------
 
-/// Starte den TCP-Listener in einem neuen Background-Thread.
+/// Starte den TCP-Client in einem neuen Background-Thread.
 ///
 /// Die Kommunikation funktioniert mit einem Crossbeam-Channel,
 /// wobei der Receiver im `MessageReceiver` gespeichert wird und von
 /// `receive_messages` ausgelesen wird.
-fn setup(mut commands: Commands) {
+/// Der Thread erhält außerdem eine Kopie von `EyeCamConnection`,
+/// um die aktuelle Verbindung für Befehle bereitzustellen.
+fn setup(mut commands: Commands, connection: Res<EyeCamConnection>) {
     let (tx, rx) = crossbeam_channel::bounded(2);
     commands.insert_resource(MessageReceiver(rx));
 
-    backend::spawn_eyecam_receiver(tx);
+    backend::spawn_eyecam_receiver(tx, connection.0.clone());
 }
 
 
@@ -101,6 +128,7 @@ fn receive_messages(
     mut yolo_message: ResMut<LatestYoloMessage>,
     mut sensor_message: ResMut<LatestSensorMessage>,
     mut graph_history: ResMut<GraphHistory>,
+    mut eyecam_status: ResMut<EyeCamStatus>,
 ) {
     let now = time.elapsed_secs_f64();
 
@@ -112,6 +140,10 @@ fn receive_messages(
                 for value in graph.graphs {
                     graph_history.push(now, value);
                 }
+            }
+            protocol::Message::Status(status) => {
+                eyecam_status.running = status.running;
+                eyecam_status.last_update = Some(now);
             }
         }
     }
