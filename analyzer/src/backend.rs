@@ -139,7 +139,7 @@ fn decode_jpeg(jpeg_bytes: Vec<u8>) -> protocol::Jpeg {
 
 /// API zwischen EyeCam und dem Analyzer.
 /// Generiert aus der `packets.proto` Datei.
-mod api {
+pub mod api {
     include!(concat!(env!("OUT_DIR"), "/packets.rs"));
 }
 
