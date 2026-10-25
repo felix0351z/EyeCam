@@ -7,3 +7,5 @@
 target/
 
 **/__pycache__/
+# Analyzer Packet-Logs
+logs/

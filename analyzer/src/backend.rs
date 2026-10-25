@@ -1,7 +1,7 @@
 use crate::backend::protocol::{GraphMessage, GraphSource, GraphValue, SensorMessage, StatusMessage, YoloMessage, Zone};
+use crate::logger::PacketLogger;
 use crossbeam_channel::Sender;
 use prost::Message;
-use std::error::Error;
 use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
@@ -23,6 +23,10 @@ const WRITE_TIMEOUT: Duration = Duration::from_millis(100);
 /// in `control` hinterlegt, über welches die UI Befehle senden kann.
 pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>, control: EyeCamControl) {
     std::thread::spawn(move || {
+        let mut logger = PacketLogger::new()
+            .inspect_err(|e| eprintln!("Packet-Logger deaktiviert: {e}"))
+            .ok();
+
         loop {
             let Ok(stream) = TcpStream::connect(EYECAM_ADDRESS) else {
                 std::thread::sleep(RETRY_INTERVAL);
@@ -37,7 +41,17 @@ pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>, control: EyeCamContr
             }
 
             let mut buf_reader = BufReader::new(&stream);
-            while let Ok(packet) = read_packet_from_buffer(&mut buf_reader) {
+            while let Ok(frame) = read_frame(&mut buf_reader) {
+                if let Some(l) = logger.as_mut() {
+                    if let Err(e) = l.log(&frame) {
+                        eprintln!("Logging fehlgeschlagen, Logger deaktiviert: {e}");
+                        logger = None;
+                    }
+                }
+
+                // Kaputte Pakete überspringen, das Framing bleibt dabei intakt.
+                let Ok(packet) = api::Packet::decode(&frame[..]) else { continue };
+
                 // Send a new message through the channel if a payload is available.
                 if let Ok(msg) = packet.try_into() {
                     if tx.send(msg).is_err() {
@@ -46,6 +60,9 @@ pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>, control: EyeCamContr
                 }
             }
 
+            if let Some(l) = logger.as_mut() {
+                let _ = l.flush();
+            }
             control.set_stream(None);
             eprintln!("Connection closed. Reconnecting...");
         }
@@ -88,25 +105,20 @@ impl EyeCamControl {
 // Funktionen
 // --------------------------------------
 
-/// Lese ein Packet von einem Bytestream aus
-fn read_packet_from_buffer(
-    buffer: &mut BufReader<&TcpStream>
-) -> Result<api::Packet, Box<dyn Error>> {
+/// Lese einen Frame mit 4 Byte Längenpräfix (Big Endian) aus dem Stream.
+fn read_frame(reader: &mut impl Read) -> std::io::Result<Vec<u8>> {
     // Länge der Paketgröße.
     // Dieser ist vom Typ u32 und wird daher mit 4 Bytes angegeben.
     let mut len_buf = [0u8; 4];
 
     // Lese die Paketgröße
-    buffer.read_exact(&mut len_buf)?;
+    reader.read_exact(&mut len_buf)?;
     let size = u32::from_be_bytes(len_buf) as usize;
 
     // Paket lesen und in einem Vec-Buffer zwischenspeichern.
-    let mut packet_buf = vec![0u8; size];
-    buffer.read_exact(&mut packet_buf)?;
-
-    // Packet mit prost deserializen.
-    let packet = api::Packet::decode(&packet_buf[..])?;
-    Ok(packet)
+    let mut frame = vec![0u8; size];
+    reader.read_exact(&mut frame)?;
+    Ok(frame)
 }
 
 
