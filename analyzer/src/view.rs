@@ -1,4 +1,5 @@
 pub mod camera;
+pub mod control_bar;
 pub mod graph;
 pub mod sensor2d;
 
@@ -7,7 +8,6 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::render::render_resource::BlendState;
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiGlobalSettings, EguiPrimaryContextPass, PrimaryEguiContext};
-use crate::receiver::{EyeCamConnection, EyeCamStatus};
 
 // --------------------------------------
 // Plugin Setup
@@ -44,7 +44,7 @@ impl Default for ViewRects {
     }
 }
 
-/// Zustand der Elemente im Fenster "Steuerung".
+/// Zustand der Elemente in der Steuerleiste (`view::control_bar`).
 #[derive(Resource, Default)]
 pub struct UiState {
     /// Zeige das Fenster mit dem Plot der Gefahrenwerte (`view::graph`).
@@ -129,13 +129,9 @@ fn setup(mut commands: Commands, mut egui_settings: ResMut<EguiGlobalSettings>) 
 fn ui_layout(
     mut contexts: EguiContexts,
     mut rects: ResMut<ViewRects>,
-    mut ui_state: ResMut<UiState>,
-    status: Res<EyeCamStatus>,
-    connection: Res<EyeCamConnection>,
-    time: Res<Time>,
+    mut control_bar: control_bar::ControlBarParams,
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
-    let now = time.elapsed_secs_f64();
 
     // Root-UI erzeugen
     let mut root_ui = egui::Ui::new(
@@ -146,34 +142,8 @@ fn ui_layout(
             .max_rect(ctx.viewport_rect()),
     );
 
-    egui::Window::new("Steuerung")
-        .resizable(true)
-        .frame(egui::Frame::window(root_ui.style()))
-        .show(&mut root_ui, |ui| {
-            ui.checkbox(&mut ui_state.show_graph, "Gefahrenwerte anzeigen");
-            ui.separator();
-
-            // Zustand und Button richten sich nach dem von der EyeCam gemeldeten Status,
-            // nicht nach dem zuletzt gesendeten Befehl.
-            let connected = status.connected(now);
-            let state = match (connected, status.running) {
-                (false, _) => "Nicht verbunden",
-                (true, true) => "Läuft",
-                (true, false) => "Pausiert",
-            };
-            ui.label(format!("EyeCam: {state}"));
-
-            ui.add_enabled_ui(connected, |ui| {
-                let label = if status.running { "Stopp" } else { "Start" };
-                if ui.button(label).clicked() {
-                    connection.0.set_running(!status.running);
-                }
-            });
-
-            let rect = ui.available_rect_before_wrap();
-            ui.allocate_rect(rect, egui::Sense::hover());
-        });
-
+    // Steuerleiste zuerst, damit sie über die volle Breite geht.
+    control_bar::show(&mut root_ui, &mut control_bar);
 
     // Teile die Fläche in zwei Teile
     let half_width = root_ui.available_width() * 0.5;
