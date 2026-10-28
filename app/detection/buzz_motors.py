@@ -3,7 +3,7 @@ import logging
 import threading
 
 from bleak import BleakClient, BleakScanner
-from classes import MoveDirection
+from detection.classes import MoveDirection
 
 CHAR_UUID = "12345678-1234-1234-1234-1234567890ac"
 TARGET_NAMES = {"OBSTACLE-L": "LEFT", "OBSTACLE-R": "RIGHT"}
