@@ -85,7 +85,7 @@ class YoloV26(YoloModel):
 
     def post_process(self, image: np.ndarray, net: np.ndarray, transform: LetterboxTransform) -> YOLOOutput:
         # [center x, center y, width, height, and 80 coco class scores]
-        # YOLOv8 has twisted axes
+        # YOLOv26 has twisted axes
         detections = np.transpose(net[0])
 
         # Get confidences and class ids from the detections
