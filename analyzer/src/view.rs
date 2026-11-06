@@ -1,4 +1,6 @@
 pub mod camera;
+pub mod control_bar;
+pub mod graph;
 pub mod sensor2d;
 
 use bevy::camera::{CameraOutputMode, Hdr, ScalingMode, Viewport};
@@ -15,10 +17,13 @@ impl Plugin for ViewPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<ViewRects>()
+            .init_resource::<UiState>()
             .add_systems(Startup, setup)
             .add_systems(EguiPrimaryContextPass, (ui_layout, update_viewports));
     }
 }
+
+const SENSOR_PANEL_ID: &str = "eyecam_sensor";
 
 // --------------------------------------
 // Ressourcen und Komponenten
@@ -39,6 +44,13 @@ impl Default for ViewRects {
             view_sensor: egui::Rect::ZERO,
         }
     }
+}
+
+/// Zustand der Elemente in der Steuerleiste (`view::control_bar`).
+#[derive(Resource, Default)]
+pub struct UiState {
+    /// Zeige das Fenster mit dem Plot der Gefahrenwerte (`view::graph`).
+    pub show_graph: bool,
 }
 
 /// Bevy-Kamera für die linke Seite des Fensters,
@@ -119,8 +131,15 @@ fn setup(mut commands: Commands, mut egui_settings: ResMut<EguiGlobalSettings>) 
 fn ui_layout(
     mut contexts: EguiContexts,
     mut rects: ResMut<ViewRects>,
+    mut control_bar: control_bar::ControlBarParams,
+    window: Single<&Window>,
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
+
+    // bevy_egui rechnet im ersten Frame mit pixels_per_point = 1.0 (z.B. Retina),
+    // die Fläche passt dann nicht zur Fenstergröße.
+    let invalid_scale = (ctx.viewport_rect().width() * ctx.pixels_per_point()
+        - window.physical_width() as f32).abs() > 1.0;
 
     // Root-UI erzeugen
     let mut root_ui = egui::Ui::new(
@@ -131,19 +150,12 @@ fn ui_layout(
             .max_rect(ctx.viewport_rect()),
     );
 
-    egui::Window::new("Steuerung")
-        .resizable(true)
-        .frame(egui::Frame::window(root_ui.style()))
-        .show(&mut root_ui, |ui| {
-
-            let rect = ui.available_rect_before_wrap();
-            ui.allocate_rect(rect, egui::Sense::hover());
-        });
-
+    // Steuerleiste zuerst, damit sie über die volle Breite geht.
+    control_bar::show(&mut root_ui, &mut control_bar);
 
     // Teile die Fläche in zwei Teile
     let half_width = root_ui.available_width() * 0.5;
-    egui::Panel::right("eyecam_sensor")
+    egui::Panel::right(SENSOR_PANEL_ID)
         .resizable(true)
         .default_size(half_width)
         .frame(egui::Frame::NONE)
@@ -154,6 +166,11 @@ fn ui_layout(
             ui.allocate_rect(rect, egui::Sense::hover());
             rects.view_sensor = rect;
         });
+
+    // Panelbreite aus so einem Frame nicht übernehmen, sonst bleibt sie gespeichert.
+    if invalid_scale {
+        ctx.data_mut(|d| d.remove::<egui::containers::panel::PanelState>(egui::Id::new(SENSOR_PANEL_ID)));
+    }
 
 
     // Nehme den Inhalt der verbleibenden linken Seite,

@@ -1,6 +1,6 @@
 import numpy as np
 
-from detection.classes import DetectionAlgorithm, MoveDirection
+from detection.classes import DangerValues, DetectionAlgorithm, MoveDirection
 from sensor.classes import SensorOutput
 from yolo.classes import YOLOOutput
 
@@ -29,7 +29,7 @@ class ZoneDetection(DetectionAlgorithm):
         self._sensor_danger = np.zeros(3, dtype=np.float32)
 
 
-    def calculate(self, yolo_output: YOLOOutput | None, sensor_output: SensorOutput | None):
+    def calculate(self, yolo_output: YOLOOutput | None, sensor_output: SensorOutput | None) -> DangerValues:
 
         danger_values_yolo = yolo_obstacle_map(yolo_output.image.shape, yolo_output.boxes) if yolo_output is not None else np.zeros(3)
         danger_values_sensor = sensor_obstacle_map(sensor_output) if sensor_output is not None else np.zeros(3)
@@ -40,12 +40,14 @@ class ZoneDetection(DetectionAlgorithm):
         self._yolo_danger = alpha_yolo * danger_values_yolo + (1 - alpha_yolo) * self._yolo_danger
         self._sensor_danger = alpha_sensor * danger_values_sensor + (1 - alpha_sensor) * self._sensor_danger
 
+        result = DangerValues(yolo=self._yolo_danger, sensor=self._sensor_danger)
+
         danger_values = np.maximum(self._yolo_danger, self._sensor_danger)
         left, middle, right = danger_values
 
         # No obstacle ahead
         if middle <= self.MOVE_THRESHOLD:
-            return
+            return result
 
         # Stop if both sides are blocked
         if min(left, right) > self.MOVE_THRESHOLD:
@@ -55,6 +57,8 @@ class ZoneDetection(DetectionAlgorithm):
             self._move(MoveDirection.LEFT)
         else:
             self._move(MoveDirection.RIGHT)
+
+        return result
 
 
 def yolo_obstacle_map(image_shape, boxes: np.ndarray):

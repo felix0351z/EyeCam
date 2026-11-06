@@ -1,76 +1,124 @@
-use crate::backend::protocol::{GraphMessage, GraphValue, SensorMessage, YoloMessage};
+use crate::backend::protocol::{GraphMessage, GraphSource, GraphValue, SensorMessage, StatusMessage, YoloMessage, Zone};
+use crate::logger::PacketLogger;
 use crossbeam_channel::Sender;
 use prost::Message;
-use std::error::Error;
-use std::io::{BufReader, Read};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::io::{BufReader, Read, Write};
+use std::net::TcpStream;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use zune_jpeg::JpegDecoder;
 use zune_jpeg::zune_core::bytestream::ZCursor;
 // --------------------------------------
 // Einstiegspunkt
 // --------------------------------------
+const EYECAM_ADDRESS: &str = "eyecam.local:6969";
+const RETRY_INTERVAL: Duration = Duration::from_secs(2);
+const READ_TIMEOUT: Duration = Duration::from_secs(2);
+/// Befehle werden aus dem UI-Thread gesendet, dieser darf nicht lange blockieren.
+const WRITE_TIMEOUT: Duration = Duration::from_millis(100);
 
-/// Spawne einen neuen Thread um Daten vom EyeCam-Gerät zu empfangen
-pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>) {
+/// Spawne einen neuen Thread um Daten vom EyeCam-Gerät zu empfangen.
+///
+/// Während eine Verbindung besteht, wird ein zweites Handle auf den Socket
+/// in `control` hinterlegt, über welches die UI Befehle senden kann.
+pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>, control: EyeCamControl) {
     std::thread::spawn(move || {
+        let mut logger = PacketLogger::new()
+            .inspect_err(|e| eprintln!("Packet-Logger deaktiviert: {e}"))
+            .ok();
 
-        let local_ip = local_ip_address::local_ip()
-            .expect("Unable to get local IP address");
-        println!("Local IP: {}", local_ip);
-        let socket = SocketAddr::new(local_ip, 6969);
+        loop {
+            let Ok(stream) = TcpStream::connect(EYECAM_ADDRESS) else {
+                std::thread::sleep(RETRY_INTERVAL);
+                continue;
+            };
+            stream.set_read_timeout(Some(READ_TIMEOUT)).ok();
+            stream.set_write_timeout(Some(WRITE_TIMEOUT)).ok();
+            control.set_stream(stream.try_clone().ok());
 
-        let listener = TcpListener::bind(socket).expect("Unable to bind TCP listener");
-        for stream in listener.incoming() {
-            // Get the stream and open a new buffer reader
-            let stream = stream.unwrap();
+            if let Ok(peer_ip) = stream.peer_addr() {
+                println!("Connected to EyeCam device on ip {}", peer_ip);
+            }
+
             let mut buf_reader = BufReader::new(&stream);
-            println!("Connection established!");
+            while let Ok(frame) = read_frame(&mut buf_reader) {
+                if let Some(l) = logger.as_mut() {
+                    if let Err(e) = l.log(&frame) {
+                        eprintln!("Logging fehlgeschlagen, Logger deaktiviert: {e}");
+                        logger = None;
+                    }
+                }
 
-            loop {
-                let packet = read_packet_from_buffer(&mut buf_reader);
+                // Kaputte Pakete überspringen, das Framing bleibt dabei intakt.
+                let Ok(packet) = api::Packet::decode(&frame[..]) else { continue };
 
-                match packet {
-                    Ok(packet) => {
-                        // Send a new message through the channel if a payload is available.
-                        if let Some(msg) = packet.try_into().ok() {
-                            if tx.send(msg).is_err() {
-                                break;
-                            }
-                        }
-                    },
-                    Err(_) => {
-                        eprintln!("Connection closed. Waiting for new connections...");
-                        break;
-                    },
+                // Send a new message through the channel if a payload is available.
+                if let Ok(msg) = packet.try_into() {
+                    if tx.send(msg).is_err() {
+                        return;
+                    }
                 }
             }
+
+            if let Some(l) = logger.as_mut() {
+                let _ = l.flush();
+            }
+            control.set_stream(None);
+            eprintln!("Connection closed. Reconnecting...");
         }
     });
+}
+
+/// Schreibender Zugriff auf die aktuelle Verbindung zur EyeCam.
+///
+/// Der Empfangs-Thread setzt beim Verbinden ein zweites Handle auf den Socket
+/// und entfernt es beim Trennen. Die UI sendet darüber Befehle.
+#[derive(Clone, Default)]
+pub struct EyeCamControl(Arc<Mutex<Option<TcpStream>>>);
+
+impl EyeCamControl {
+    /// Starte oder pausiere die Verarbeitung auf der EyeCam.
+    pub fn set_running(&self, running: bool) {
+        self.send(api::Command {
+            payload: Some(api::command::Payload::Running(running)),
+        });
+    }
+
+    /// Sende einen Befehl mit 4 Byte Längenpräfix (Big Endian).
+    /// Fehler werden ignoriert, ein Verbindungsabbruch wird vom Empfangs-Thread erkannt.
+    fn send(&self, command: api::Command) {
+        let payload = command.encode_to_vec();
+        let mut frame = (payload.len() as u32).to_be_bytes().to_vec();
+        frame.extend_from_slice(&payload);
+
+        if let Some(stream) = self.0.lock().unwrap().as_mut() {
+            let _ = stream.write_all(&frame);
+        }
+    }
+
+    fn set_stream(&self, stream: Option<TcpStream>) {
+        *self.0.lock().unwrap() = stream;
+    }
 }
 
 // --------------------------------------
 // Funktionen
 // --------------------------------------
 
-/// Lese ein Packet von einem Bytestream aus
-fn read_packet_from_buffer(
-    buffer: &mut BufReader<&TcpStream>
-) -> Result<api::Packet, Box<dyn Error>> {
+/// Lese einen Frame mit 4 Byte Längenpräfix (Big Endian) aus dem Stream.
+fn read_frame(reader: &mut impl Read) -> std::io::Result<Vec<u8>> {
     // Länge der Paketgröße.
     // Dieser ist vom Typ u32 und wird daher mit 4 Bytes angegeben.
     let mut len_buf = [0u8; 4];
 
     // Lese die Paketgröße
-    buffer.read_exact(&mut len_buf)?;
+    reader.read_exact(&mut len_buf)?;
     let size = u32::from_be_bytes(len_buf) as usize;
 
     // Paket lesen und in einem Vec-Buffer zwischenspeichern.
-    let mut packet_buf = vec![0u8; size];
-    buffer.read_exact(&mut packet_buf)?;
-
-    // Packet mit prost deserializen.
-    let packet = api::Packet::decode(&packet_buf[..])?;
-    Ok(packet)
+    let mut frame = vec![0u8; size];
+    reader.read_exact(&mut frame)?;
+    Ok(frame)
 }
 
 
@@ -103,7 +151,7 @@ fn decode_jpeg(jpeg_bytes: Vec<u8>) -> protocol::Jpeg {
 
 /// API zwischen EyeCam und dem Analyzer.
 /// Generiert aus der `packets.proto` Datei.
-mod api {
+pub mod api {
     include!(concat!(env!("OUT_DIR"), "/packets.rs"));
 }
 
@@ -116,7 +164,14 @@ pub mod protocol {
     pub enum Message {
         Yolo(YoloMessage),
         Graph(GraphMessage),
-        Sensor(SensorMessage)
+        Sensor(SensorMessage),
+        Status(StatusMessage),
+    }
+
+    /// Zustand der EyeCam, wird regelmäßig als Heartbeat gesendet.
+    #[derive(Copy, Clone, PartialEq)]
+    pub struct StatusMessage {
+        pub running: bool,
     }
 
     #[derive(Clone, PartialEq)]
@@ -150,10 +205,28 @@ pub mod protocol {
         pub graphs: Vec<GraphValue>
     }
 
+    /// Geglätteter Gefahrenwert (0-1) einer Zone der ZoneDetection.
     #[derive(Copy, Clone, PartialEq)]
     pub struct GraphValue {
-        pub name: i32,
+        pub source: GraphSource,
+        pub zone: Zone,
         pub value: f32,
+    }
+
+    /// Quelle, aus welcher der Gefahrenwert berechnet wurde.
+    #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+    pub enum GraphSource {
+        Yolo,
+        Sensor,
+    }
+
+    /// Zone der ZoneDetection.
+    /// Der Wert entspricht dem Index (links nach rechts).
+    #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+    pub enum Zone {
+        Left = 0,
+        Middle = 1,
+        Right = 2,
     }
 }
 
@@ -171,17 +244,27 @@ impl std::fmt::Display for NoPayloadError {
 
 /// Implementationen der Traits
 /// für die Konvertierung zwischen API und dem Channel Protokoll.
-impl From<api::GraphValue> for GraphValue {
-    fn from(value: api::GraphValue) -> Self {
-        GraphValue { name: value.name, value: value.value, }
+impl TryFrom<api::GraphValue> for GraphValue {
+    type Error = prost::UnknownEnumValue;
+    fn try_from(value: api::GraphValue) -> Result<Self, Self::Error> {
+        let (source, zone) = match api::GraphLabel::try_from(value.name)? {
+            api::GraphLabel::YoloLeft => (GraphSource::Yolo, Zone::Left),
+            api::GraphLabel::YoloMiddle => (GraphSource::Yolo, Zone::Middle),
+            api::GraphLabel::YoloRight => (GraphSource::Yolo, Zone::Right),
+            api::GraphLabel::SensorLeft => (GraphSource::Sensor, Zone::Left),
+            api::GraphLabel::SensorMiddle => (GraphSource::Sensor, Zone::Middle),
+            api::GraphLabel::SensorRight => (GraphSource::Sensor, Zone::Right),
+        };
+        Ok(GraphValue { source, zone, value: value.value })
     }
 }
 impl From<api::GraphPacket> for GraphMessage {
     fn from(value: api::GraphPacket) -> Self {
         GraphMessage {
             frame_id: value.frame_id,
+            // Unbekannte Labels (z.B. neuere Proto-Version auf der EyeCam) werden verworfen.
             graphs: value.graphs.into_iter()
-                .map(GraphValue::from)
+                .filter_map(|graph| GraphValue::try_from(graph).ok())
                 .collect(),
         }
     }
@@ -250,6 +333,9 @@ impl TryFrom<api::Packet> for protocol::Message {
             }
             api::packet::Payload::Sensor(packet) => {
                 Ok(protocol::Message::Sensor(SensorMessage::from(packet)))
+            }
+            api::packet::Payload::Status(packet) => {
+                Ok(protocol::Message::Status(StatusMessage { running: packet.running }))
             }
         }
     }

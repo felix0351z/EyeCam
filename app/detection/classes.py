@@ -1,7 +1,10 @@
 import abc
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
+
+import numpy as np
 
 from sensor.classes import SensorOutput
 from yolo.classes import YOLOOutput
@@ -12,6 +15,15 @@ class MoveDirection(Enum):
     RIGHT = 1
     STOP = 2
 
+
+@dataclass
+class DangerValues:
+    """
+    Smoothed danger values (0-1) of a detection algorithm.
+    Both arrays have the shape (3,): [left, middle, right].
+    """
+    yolo: np.ndarray
+    sensor: np.ndarray
 
 
 class DetectionAlgorithm(abc.ABC):
@@ -39,10 +51,11 @@ class DetectionAlgorithm(abc.ABC):
 
 
     @abc.abstractmethod
-    def calculate(self, yolo_output: YOLOOutput, sensor_output: SensorOutput):
+    def calculate(self, yolo_output: YOLOOutput, sensor_output: SensorOutput) -> DangerValues:
         """
         Algorithm logic, implemented by all subclasses.
-        Needs to be called every frame in the main loop
+        Needs to be called every frame in the main loop.
+        Returns the current danger values, e.g. for the Analyzer.
         """
         pass
 
