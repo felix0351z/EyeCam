@@ -23,7 +23,7 @@ def main():
     # ---------------------------------
     from yolo.model import pre_process, YoloV26
     from tracker.tracker import Tracker
-    MODEL_PATH = "/home/eyecam/Documents/yolo26n_ncnn_model"
+    MODEL_PATH = "/home/eyecam/yolo26n_ncnn_model"
     tracker = Tracker()
 
     try:
