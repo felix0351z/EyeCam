@@ -5,6 +5,9 @@ from google.protobuf import message as _message
 from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+MOVE_LEFT: MoveDirection
+MOVE_RIGHT: MoveDirection
+MOVE_STOP: MoveDirection
 SENSOR_LEFT: GraphLabel
 SENSOR_MIDDLE: GraphLabel
 SENSOR_RIGHT: GraphLabel
@@ -34,17 +37,25 @@ class GraphValue(_message.Message):
     value: float
     def __init__(self, name: _Optional[_Union[GraphLabel, str]] = ..., value: _Optional[float] = ...) -> None: ...
 
+class MovePacket(_message.Message):
+    __slots__ = ["direction"]
+    DIRECTION_FIELD_NUMBER: _ClassVar[int]
+    direction: MoveDirection
+    def __init__(self, direction: _Optional[_Union[MoveDirection, str]] = ...) -> None: ...
+
 class Packet(_message.Message):
-    __slots__ = ["graph", "sensor", "status", "yolo"]
+    __slots__ = ["graph", "move", "sensor", "status", "yolo"]
     GRAPH_FIELD_NUMBER: _ClassVar[int]
+    MOVE_FIELD_NUMBER: _ClassVar[int]
     SENSOR_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     YOLO_FIELD_NUMBER: _ClassVar[int]
     graph: GraphPacket
+    move: MovePacket
     sensor: SensorPacket
     status: StatusPacket
     yolo: YoloPacket
-    def __init__(self, yolo: _Optional[_Union[YoloPacket, _Mapping]] = ..., sensor: _Optional[_Union[SensorPacket, _Mapping]] = ..., graph: _Optional[_Union[GraphPacket, _Mapping]] = ..., status: _Optional[_Union[StatusPacket, _Mapping]] = ...) -> None: ...
+    def __init__(self, yolo: _Optional[_Union[YoloPacket, _Mapping]] = ..., sensor: _Optional[_Union[SensorPacket, _Mapping]] = ..., graph: _Optional[_Union[GraphPacket, _Mapping]] = ..., status: _Optional[_Union[StatusPacket, _Mapping]] = ..., move: _Optional[_Union[MovePacket, _Mapping]] = ...) -> None: ...
 
 class SensorPacket(_message.Message):
     __slots__ = ["distance_mm", "range_sigma_mm", "target_status"]
@@ -79,4 +90,7 @@ class YoloPacket(_message.Message):
     def __init__(self, frame_id: _Optional[int] = ..., timestamp_ms: _Optional[int] = ..., jpeg_bytes: _Optional[bytes] = ..., confidences: _Optional[bytes] = ..., class_ids: _Optional[bytes] = ..., boxes: _Optional[bytes] = ...) -> None: ...
 
 class GraphLabel(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = []
+
+class MoveDirection(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = []
