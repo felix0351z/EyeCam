@@ -60,6 +60,8 @@ class Sender:
         # Running is the variable to control if EyeCam is active or paused
         self.running = threading.Event()
         self.running.set()
+        # Set by the analyzer to stop the app in a controlled way
+        self.shutdown = threading.Event()
 
         threading.Thread(target=self._run, name="Sender", daemon=True).start()
 
@@ -124,6 +126,10 @@ class Sender:
                     else:
                         self.running.clear()
                     log.info("Received command: running=%s", command.running)
+
+                if command.HasField("shutdown"):
+                    log.info("Received command: shutdown")
+                    self.shutdown.set()
         except OSError:
             pass # Connection closed.
 

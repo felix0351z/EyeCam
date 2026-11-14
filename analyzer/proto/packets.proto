@@ -66,5 +66,6 @@ message Packet {
 message Command {
   oneof payload {
     bool running = 1;
+    bool shutdown = 2;
   }
 }

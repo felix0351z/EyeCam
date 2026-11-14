@@ -84,6 +84,14 @@ impl EyeCamControl {
         });
     }
 
+    /// Beende die EyeCam-App kontrolliert.
+    /// Danach kann sie nicht mehr über den Analyzer gestartet werden.
+    pub fn shutdown(&self) {
+        self.send(api::Command {
+            payload: Some(api::command::Payload::Shutdown(true)),
+        });
+    }
+
     /// Sende einen Befehl mit 4 Byte Längenpräfix (Big Endian).
     /// Fehler werden ignoriert, ein Verbindungsabbruch wird vom Empfangs-Thread erkannt.
     fn send(&self, command: api::Command) {

@@ -81,7 +81,8 @@ def main():
     t_last = time.perf_counter()
 
     try:
-        while True:
+        # Runs until the analyzer sends a shutdown command
+        while not sender.shutdown.is_set():
             # Paused by the analyzer
             if not sender.running.wait(1):
                 continue
@@ -120,9 +121,11 @@ def main():
                 t_last = now
 
     finally:
+        logging.info("Shutting down EyeCam ...")
         buzz.stop()
         if sensor_reader is not None:
             sensor_reader.stop()
+        picam2.stop()
 
 if __name__ == "__main__":
     main()
