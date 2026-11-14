@@ -41,12 +41,25 @@ message StatusPacket {
   bool running = 1;
 }
 
+// Richtung des Ausweichsignals, entspricht MoveDirection in der App
+enum MoveDirection {
+  MOVE_LEFT = 0;
+  MOVE_RIGHT = 1;
+  MOVE_STOP = 2;
+}
+
+// Ausweichsignal, wird bei jedem ausgelösten Signal der Detection gesendet
+message MovePacket {
+  MoveDirection direction = 1;
+}
+
 message Packet {
   oneof payload {
     YoloPacket yolo = 1;
     SensorPacket sensor = 2;
     GraphPacket graph = 3;
     StatusPacket status = 4;
+    MovePacket move = 5;
   }
 }
 

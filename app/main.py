@@ -65,6 +65,7 @@ def main():
     detection_algorithm = ZoneDetection()
     detection_algorithm.add_subscriber(on_detection)
     detection_algorithm.add_subscriber(buzz.notify)
+    detection_algorithm.add_subscriber(sender.send_move_packet)
 
 
 

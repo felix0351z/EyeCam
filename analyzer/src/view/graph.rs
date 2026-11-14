@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPrimaryContextPass};
 use egui::Color32;
-use egui_plot::{HLine, Legend, Line, LineStyle, Plot, PlotPoints};
+use egui_plot::{HLine, Legend, Line, LineStyle, Plot, PlotPoints, VLine};
 use std::collections::VecDeque;
-use crate::receiver::{GraphHistory, GRAPH_HISTORY_SECS};
+use crate::receiver::{GraphHistory, MoveSignals, GRAPH_HISTORY_SECS};
+use crate::view::move_signal::signal_style;
 use crate::view::UiState;
 
 // --------------------------------------
@@ -39,6 +40,7 @@ fn show_graph_window(
     mut contexts: EguiContexts,
     mut ui_state: ResMut<UiState>,
     history: Res<GraphHistory>,
+    move_signals: Res<MoveSignals>,
     time: Res<Time>,
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
@@ -77,6 +79,12 @@ fn show_graph_window(
                                 .color(*color)
                                 .style(LineStyle::dashed_loose())
                         );
+                    }
+
+                    // Ausgelöste Ausweichsignale als senkrechte Markierung
+                    for &(time, direction) in &move_signals.0 {
+                        let (text, color) = signal_style(direction);
+                        plot_ui.vline(VLine::new(text, time).color(color));
                     }
                 });
         });
