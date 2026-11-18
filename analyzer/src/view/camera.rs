@@ -7,6 +7,9 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::sprite::Anchor;
 use crate::receiver::{LatestYoloMessage, ReceiveSet};
 
+/// Breite, in der das Kamerabild angezeigt wird (unabhängig von der Auflösung der EyeCam).
+const DISPLAY_WIDTH: f32 = 640.0;
+
 // --------------------------------------
 // Plugin Setup
 // --------------------------------------
@@ -215,6 +218,7 @@ fn update_live_image(
     mut latest_yolo: ResMut<LatestYoloMessage>,
     mut live_image: ResMut<LiveImage>,
     mut images: ResMut<Assets<Image>>,
+    mut sprite: Single<&mut Sprite, With<LiveImageSprite>>,
 ) {
     // Nur rendern, wenn seit dem letzten Frame eine neue Nachricht angekommen ist.
     let Some(yolo) = latest_yolo.0.take() else { return; };
@@ -240,6 +244,11 @@ fn update_live_image(
             TextureFormat::Rgba8UnormSrgb,
             RenderAssetUsages::default(),
         );
+
+        // Feste Anzeigegröße, damit kleinere Bilder (z. B. 320px) nicht kleiner dargestellt werden.
+        // Boxen und Labels skalieren über `image_to_world` automatisch mit.
+        let aspect = new_height as f32 / new_width as f32;
+        sprite.custom_size = Some(Vec2::new(DISPLAY_WIDTH, DISPLAY_WIDTH * aspect));
     }
 
     // Aktualisiere die Detections, also Boxen, Confidences und ClassIds in dem LiveImage
