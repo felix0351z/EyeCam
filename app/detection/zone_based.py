@@ -29,7 +29,8 @@ class ZoneDetection(DetectionAlgorithm):
         self._sensor_danger = np.zeros(3, dtype=np.float32)
 
 
-    def calculate(self, yolo_output: YOLOOutput | None, sensor_output: SensorOutput | None) -> DangerValues:
+    def calculate(self, yolo_output: YOLOOutput | None, sensor_output: SensorOutput | None,
+                  track_ids: np.ndarray | None = None) -> DangerValues:
 
         danger_values_yolo = yolo_obstacle_map(yolo_output.image.shape, yolo_output.boxes) if yolo_output is not None else np.zeros(3)
         danger_values_sensor = sensor_obstacle_map(sensor_output) if sensor_output is not None else np.zeros(3)
