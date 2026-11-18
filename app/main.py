@@ -76,6 +76,9 @@ def main():
     if (yolo_model is None) and (sensor_reader is None):
         sys.exit("YOLO and Sensor not available.")
 
+    # Limit the frame rate to save power (None = no limit)
+    MAX_FPS = 7
+
     # Measure FPS rate
     frames = 0
     t_last = time.perf_counter()
@@ -87,6 +90,7 @@ def main():
             if not sender.running.wait(1):
                 continue
 
+            t_start = time.perf_counter()
             frame = picam2.capture_array()
 
             # 1. Use YOLO and track the boxes
@@ -112,7 +116,13 @@ def main():
             danger_values = detection_algorithm.calculate(yolo_output, sensor_frame)
             sender.send_graph_packet(danger_values)
 
-            # 4. Measure fps and print out every second
+            # 4. Limit the frame rate
+            if MAX_FPS is not None:
+                remaining = 1 / MAX_FPS - (time.perf_counter() - t_start)
+                if remaining > 0:
+                    time.sleep(remaining)
+
+            # 5. Measure fps and print out every second
             frames += 1
             now = time.perf_counter()
             if now - t_last >= 1.0:
