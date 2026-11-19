@@ -56,6 +56,7 @@ CAM_CLASSES = {
     16,  # dog
     25,  # umbrella
     28,  # suitcase
+    41,  # cup
     56,  # chair
     57,  # couch
     58,  # potted plant
@@ -69,6 +70,7 @@ PARCOURS_CLASSES = {
     13,  # bench
     24,  # backpack
     28,  # suitcase
+    41,  # cup
     56,  # chair
     57,  # couch
     58,  # potted plant
