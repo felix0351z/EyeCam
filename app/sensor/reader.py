@@ -11,8 +11,6 @@ log = logging.getLogger(__name__)
 SIZE = 8
 GRID_SIZE = SIZE * SIZE
 FREQUENCY_HZ = 15
-FLIP_UD = False
-FLIP_LR = False
 
 # Frames older than this are treated as missing (e.g. sensor process crashed)
 MAX_AGE_S = 0.2
@@ -28,11 +26,8 @@ _FRAME_DTYPE = np.dtype([
 
 def _to_grid(values, dtype) -> np.ndarray:
     grid = np.asarray(values[:GRID_SIZE], dtype=dtype).reshape(SIZE, SIZE)
-    if FLIP_UD:
-        grid = np.flipud(grid)
-    if FLIP_LR:
-        grid = np.fliplr(grid)
-    return grid
+    return np.rot90(grid, k=1)
+
 
 def _start_sensor_process(buf, lock, ready, stop):
     """

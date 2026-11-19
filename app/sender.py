@@ -10,7 +10,7 @@ import simplejpeg
 from google.protobuf.message import DecodeError
 
 from api import packets_pb2
-from detection.classes import DangerValues
+from detection.classes import DangerValues, MoveDirection
 from sensor.classes import SensorOutput
 from yolo.classes import YOLOOutput
 
@@ -60,6 +60,8 @@ class Sender:
         # Running is the variable to control if EyeCam is active or paused
         self.running = threading.Event()
         self.running.set()
+        # Set by the analyzer to stop the app in a controlled way
+        self.shutdown = threading.Event()
 
         threading.Thread(target=self._run, name="Sender", daemon=True).start()
 
@@ -124,6 +126,10 @@ class Sender:
                     else:
                         self.running.clear()
                     log.info("Received command: running=%s", command.running)
+
+                if command.HasField("shutdown"):
+                    log.info("Received command: shutdown")
+                    self.shutdown.set()
         except OSError:
             pass # Connection closed.
 
@@ -190,6 +196,25 @@ class Sender:
 
         packet = packets_pb2.Packet(
             graph=packets_pb2.GraphPacket(frame_id=0, graphs=graphs)
+        )
+
+        self._send(packet)
+
+    def send_move_packet(self, direction: MoveDirection):
+        """
+        Detection subscriber: send every triggered move signal to the analyzer.
+        """
+        if not self.connected:
+            return
+
+        directions = {
+            MoveDirection.LEFT: packets_pb2.MOVE_LEFT,
+            MoveDirection.RIGHT: packets_pb2.MOVE_RIGHT,
+            MoveDirection.STOP: packets_pb2.MOVE_STOP,
+        }
+
+        packet = packets_pb2.Packet(
+            move=packets_pb2.MovePacket(direction=directions[direction])
         )
 
         self._send(packet)

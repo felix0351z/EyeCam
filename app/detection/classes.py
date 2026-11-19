@@ -51,10 +51,12 @@ class DetectionAlgorithm(abc.ABC):
 
 
     @abc.abstractmethod
-    def calculate(self, yolo_output: YOLOOutput, sensor_output: SensorOutput) -> DangerValues:
+    def calculate(self, yolo_output: YOLOOutput | None, sensor_output: SensorOutput | None,
+                  track_ids: np.ndarray | None = None) -> DangerValues:
         """
         Algorithm logic, implemented by all subclasses.
         Needs to be called every frame in the main loop.
+        track_ids are the ByteTrack ids in the same order as the YOLO boxes (optional).
         Returns the current danger values, e.g. for the Analyzer.
         """
         pass
