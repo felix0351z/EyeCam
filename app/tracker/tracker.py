@@ -13,9 +13,13 @@ class Tracker:
 
     @dataclass
     class TrackerArgs:
-        track_thresh: float = 0.5
+        # New tracks start above track_thresh + 0.1 (= 0.5), so slightly blurred objects are still picked up
+        track_thresh: float = 0.4
+        # Frames a lost track is kept to find it again with the same id (~4 s at 7 FPS)
         track_buffer: int = 30
-        match_thresh: float = 0.8
+        # Max matching cost (1 - IoU * score). 0.9 tolerates bigger jumps of the boxes
+        # between two frames, e.g. caused by the up and down movement while walking.
+        match_thresh: float = 0.9
         mot20: bool = False
 
     def __init__(self):

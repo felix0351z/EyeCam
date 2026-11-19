@@ -17,6 +17,21 @@ def main():
     picam2.configure("preview")
     picam2.start()
 
+    # Reduce motion blur while walking:
+    # - Short exposure (more image noise, but sharper frames)
+    # - Fixed focus instead of autofocus, which keeps refocusing while walking.
+    #   LensPosition is in dioptres (1 / distance in m): 0.5 = 2 m, sharp from ~1 m to far away.
+    CAM_LENS_POSITION = 0.5
+    try:
+        from libcamera import controls
+        picam2.set_controls({
+            "AeExposureMode": controls.AeExposureModeEnum.Short,
+            "AfMode": controls.AfModeEnum.Manual,
+            "LensPosition": CAM_LENS_POSITION,
+        })
+    except Exception as e:
+        logging.warning("Camera controls could not be set: %s", e)
+
 
     # ---------------------------------
     # YOLO Settings
@@ -54,6 +69,7 @@ def main():
     from detection.zone_based import ZoneDetection
     from detection.sensor_first import SensorFirstDetection
     from detection.parcours import ParcoursDetection
+    from detection.parcours_stable import ParcoursStableDetection
     from sender import Sender
     from detection.buzz_motors import BuzzController
 
@@ -70,8 +86,9 @@ def main():
         "zone": ZoneDetection,
         "sensor_first": SensorFirstDetection,
         "parcours": ParcoursDetection,
+        "parcours_stable": ParcoursStableDetection,
     }
-    algorithm_name = sys.argv[1] if len(sys.argv) > 1 else "parcours"
+    algorithm_name = sys.argv[1] if len(sys.argv) > 1 else "parcours_stable"
     if algorithm_name not in algorithms:
         sys.exit(f"Unknown algorithm '{algorithm_name}', choose one of: {', '.join(algorithms)}")
     logging.info("Detection algorithm: %s", algorithm_name)
