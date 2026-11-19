@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::fs;
 use bevy::asset::RenderAssetUsages;
-use bevy::color::palettes::css::RED;
+use bevy::color::palettes::css::{RED, YELLOW};
 use bevy::prelude::FontSize::Px;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::sprite::Anchor;
@@ -21,6 +21,7 @@ impl Plugin for CameraViewPlugin {
             .add_systems(Update, (
                 update_live_image,
                 update_boxes,
+                update_center_line,
                 update_label.run_if(resource_changed::<LiveImage>)
             ).chain().after(ReceiveSet));
     }
@@ -169,6 +170,32 @@ fn update_boxes(
             RED
         );
     }
+}
+
+/// Zeichne eine horizontale Linie durch die Bildmitte.
+///
+/// Hilft beim Ausrichten der Kameraneigung: Die Bildmitte entspricht der optischen Achse.
+/// Bei 30° Neigung und 1,30 m Höhe trifft sie den Boden in ca. 2,25 m Abstand
+/// (Abstand = Höhe / tan(Neigung)). Liegt eine Markierung in diesem Abstand genau
+/// auf der Linie, stimmt die Neigung.
+fn update_center_line(
+    mut gizmos: Gizmos,
+    live_image: Res<LiveImage>,
+    images: Res<Assets<Image>>,
+    live_sprite: Single<(&Sprite, &GlobalTransform), With<LiveImageSprite>>,
+) {
+    let (sprite, transform) = *live_sprite;
+
+    let Some(image) = images.get(&live_image.handle) else { return };
+    let image_size = image.size_f32();
+
+    // Platzhalterbild (1x1) vor dem ersten Frame überspringen
+    if image_size.x <= 1.0 { return; }
+
+    let y = image_size.y / 2.0;
+    let left = image_to_world(Vec2::new(0.0, y), image_size, sprite, transform);
+    let right = image_to_world(Vec2::new(image_size.x, y), image_size, sprite, transform);
+    gizmos.line_2d(left, right, YELLOW);
 }
 
 /// Aktualisiere die Labels oberhalb von den Boxen
