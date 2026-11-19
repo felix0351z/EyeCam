@@ -11,7 +11,7 @@ use zune_jpeg::zune_core::bytestream::ZCursor;
 // --------------------------------------
 // Einstiegspunkt
 // --------------------------------------
-const EYECAM_ADDRESS: &str = "eyecam.local:6969";
+const EYECAM_ADDRESS: &str = "192.168.1.209:6969";
 const RETRY_INTERVAL: Duration = Duration::from_secs(2);
 const READ_TIMEOUT: Duration = Duration::from_secs(2);
 /// Befehle werden aus dem UI-Thread gesendet, dieser darf nicht lange blockieren.
