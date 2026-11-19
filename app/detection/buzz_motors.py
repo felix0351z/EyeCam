@@ -40,6 +40,8 @@ class BuzzController:
 
     def notify(self, direction: MoveDirection):
         """Detection subscriber"""
+        logging.info("direction: %s", direction)
+        logging.info("clients: %s", self._clients)
         for side in DIRECTION_TO_SIDES.get(direction, []):
             client = self._clients.get(side)
             if client is not None and not client.is_connected:
@@ -137,12 +139,15 @@ class BuzzController:
             return None
 
     async def _pulse(self, side: str):
+        logging.info("Pulsing %s", side)
+
         client = self._clients.get(side)
         if client is None or not client.is_connected:
             return
         async with self._pulse_locks[side]:  # no overlapping pulses on one motor
             try:
                 await client.write_gatt_char(CHAR_UUID, bytes([1]), response=False)
+                logging.info("write 1 OK")
                 await asyncio.sleep(MOTOR_ON_MS / 1000)
             except Exception:
                 logging.exception("BLE write to %s failed: %s", side)
@@ -150,7 +155,7 @@ class BuzzController:
                 try:
                     await client.write_gatt_char(CHAR_UUID, bytes([0]), response=False)
                 except Exception:
-                    pass
+                    logging.exception("BLE write to %s failed: %s", side)
 
     async def _shutdown(self):
         for side, client in self._clients.items():
