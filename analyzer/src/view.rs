@@ -1,6 +1,7 @@
 pub mod camera;
 pub mod control_bar;
 pub mod graph;
+pub mod move_signal;
 pub mod sensor2d;
 
 use bevy::camera::{CameraOutputMode, Hdr, ScalingMode, Viewport};

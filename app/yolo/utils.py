@@ -4,7 +4,7 @@ import cv2 as cv
 from yolo.classes import LetterboxTransform, YOLOOutput
 
 
-def letterbox(frame: np.ndarray, model_size: int = 640, color=(114, 114, 114)):
+def letterbox(frame: np.ndarray, model_size: int, color=(114, 114, 114)):
     """
     Letterbox is a resize of the image with the goal of preserving the original aspect ratio.
 

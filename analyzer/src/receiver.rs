@@ -21,6 +21,7 @@ impl Plugin for ReceiverPlugin {
             .init_resource::<LatestSensorMessage>()
             .init_resource::<GraphHistory>()
             .init_resource::<EyeCamStatus>()
+            .init_resource::<MoveSignals>()
             .init_resource::<EyeCamConnection>()
             .add_systems(Startup, setup)
             .add_systems(Update, receive_messages.in_set(ReceiveSet));
@@ -80,6 +81,21 @@ impl GraphHistory {
 }
 
 
+/// Ausweichsignale der letzten `GRAPH_HISTORY_SECS` Sekunden als `(Empfangszeit, Richtung)`.
+/// Das neueste Signal steht am Ende.
+#[derive(Resource, Default)]
+pub struct MoveSignals(pub VecDeque<(f64, protocol::MoveDirection)>);
+
+impl MoveSignals {
+    /// Füge ein Signal hinzu und verwerfe Signale, die älter als `GRAPH_HISTORY_SECS` sind.
+    fn push(&mut self, time: f64, direction: protocol::MoveDirection) {
+        self.0.push_back((time, direction));
+        while self.0.front().is_some_and(|(t, _)| time - t > GRAPH_HISTORY_SECS) {
+            self.0.pop_front();
+        }
+    }
+}
+
 /// Zuletzt von der EyeCam gemeldeter Zustand.
 #[derive(Resource, Default)]
 pub struct EyeCamStatus {
@@ -129,6 +145,7 @@ fn receive_messages(
     mut sensor_message: ResMut<LatestSensorMessage>,
     mut graph_history: ResMut<GraphHistory>,
     mut eyecam_status: ResMut<EyeCamStatus>,
+    mut move_signals: ResMut<MoveSignals>,
 ) {
     let now = time.elapsed_secs_f64();
 
@@ -145,6 +162,7 @@ fn receive_messages(
                 eyecam_status.running = status.running;
                 eyecam_status.last_update = Some(now);
             }
+            protocol::Message::Move(direction) => move_signals.push(now, direction),
         }
     }
 }

@@ -32,6 +32,11 @@ pub fn show(root_ui: &mut egui::Ui, params: &mut ControlBarParams) {
                 show_connection_state(ui, connected, params.status.running);
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    // Rechts außen, da von rechts nach links angeordnet wird.
+                    if ui.add_enabled(connected, egui::Button::new("Beenden")).clicked() {
+                        params.connection.0.shutdown();
+                    }
+                    ui.separator();
                     show_run_selector(ui, connected, params);
                     ui.separator();
                     ui.checkbox(&mut params.ui_state.show_graph, "Gefahrenwerte anzeigen");

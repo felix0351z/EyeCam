@@ -6,8 +6,8 @@ from yolo.utils import letterbox, resize_boxes_central_coordinates, nms
 
 THRESHOLD = 0.2
 
-def pre_process(image: np.ndarray) -> YOLOInput:
-    resized, transform = letterbox(image)
+def pre_process(image: np.ndarray, model_size: int) -> YOLOInput:
+    resized, transform = letterbox(image, model_size)
     height, width = resized.shape[:2]
 
     # Convert it in to a Mat object and switch BGR to RGB

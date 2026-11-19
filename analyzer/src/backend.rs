@@ -1,4 +1,4 @@
-use crate::backend::protocol::{GraphMessage, GraphSource, GraphValue, SensorMessage, StatusMessage, YoloMessage, Zone};
+use crate::backend::protocol::{GraphMessage, GraphSource, GraphValue, MoveDirection, SensorMessage, StatusMessage, YoloMessage, Zone};
 use crate::logger::PacketLogger;
 use crossbeam_channel::Sender;
 use prost::Message;
@@ -84,6 +84,14 @@ impl EyeCamControl {
         });
     }
 
+    /// Beende die EyeCam-App kontrolliert.
+    /// Danach kann sie nicht mehr über den Analyzer gestartet werden.
+    pub fn shutdown(&self) {
+        self.send(api::Command {
+            payload: Some(api::command::Payload::Shutdown(true)),
+        });
+    }
+
     /// Sende einen Befehl mit 4 Byte Längenpräfix (Big Endian).
     /// Fehler werden ignoriert, ein Verbindungsabbruch wird vom Empfangs-Thread erkannt.
     fn send(&self, command: api::Command) {
@@ -166,12 +174,21 @@ pub mod protocol {
         Graph(GraphMessage),
         Sensor(SensorMessage),
         Status(StatusMessage),
+        Move(MoveDirection),
     }
 
     /// Zustand der EyeCam, wird regelmäßig als Heartbeat gesendet.
     #[derive(Copy, Clone, PartialEq)]
     pub struct StatusMessage {
         pub running: bool,
+    }
+
+    /// Richtung eines von der Detection ausgelösten Ausweichsignals.
+    #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+    pub enum MoveDirection {
+        Left,
+        Right,
+        Stop,
     }
 
     #[derive(Clone, PartialEq)]
@@ -336,6 +353,16 @@ impl TryFrom<api::Packet> for protocol::Message {
             }
             api::packet::Payload::Status(packet) => {
                 Ok(protocol::Message::Status(StatusMessage { running: packet.running }))
+            }
+            api::packet::Payload::Move(packet) => {
+                // Unbekannte Richtungen (z.B. neuere Proto-Version) werden wie ein leeres Paket verworfen.
+                let direction = match api::MoveDirection::try_from(packet.direction) {
+                    Ok(api::MoveDirection::MoveLeft) => MoveDirection::Left,
+                    Ok(api::MoveDirection::MoveRight) => MoveDirection::Right,
+                    Ok(api::MoveDirection::MoveStop) => MoveDirection::Stop,
+                    Err(_) => return Err(NoPayloadError),
+                };
+                Ok(protocol::Message::Move(direction))
             }
         }
     }

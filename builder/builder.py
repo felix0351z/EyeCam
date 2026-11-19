@@ -11,4 +11,4 @@ if len(sys.argv) != 3:
 # Then export the model.
 # See https://docs.ultralytics.com/modes/export#arguments
 model = YOLO(model=f"{sys.argv[1]}.pt")
-model.export(format=sys.argv[2])
+model.export(format=sys.argv[2], imgsz=320)
