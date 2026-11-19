@@ -97,7 +97,7 @@ SENSOR_MAX_SIGMA_MM = 50
 # A cell only counts if a neighbour cell sees something at a similar distance
 SENSOR_NEIGHBOUR_TOLERANCE_MM = 250
 
-SENSOR_FAR_MM = 2500
+SENSOR_FAR_MM = 3000
 SENSOR_NEAR_MM = 500
 
 
@@ -113,7 +113,7 @@ class SensorFirstDetection(DetectionAlgorithm):
     The camera supports the sensor. The distance of every YOLO box is estimated from
     the point where the box touches the floor. This needs no sensor and also works for
     low obstacles below the sensor's field of view (if the camera is tilted).
-    The camera uses a stricter distance mapping (triggers at ~1.1 m, sensor at ~1.3 m).
+    The camera uses a stricter distance mapping (triggers at ~1.1 m, sensor at ~1.5 m).
 
     A warning is sent if the middle zone is above TRIGGER for CONFIRM_FRAMES frames,
     and it stays active until the middle zone falls below RELEASE (hysteresis).
@@ -121,7 +121,7 @@ class SensorFirstDetection(DetectionAlgorithm):
 
     TRIGGER = 0.6
     RELEASE = 0.45
-    CONFIRM_FRAMES = 2
+    CONFIRM_FRAMES = 1
 
     SMOOTHING_RISE = 0.7
     SMOOTHING_FALL = 0.3

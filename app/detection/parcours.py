@@ -28,7 +28,7 @@ PARCOURS_CLASSES = {
     60,  # dining table
 }
 
-# Same mapping as the sensor: the camera also triggers at ~1.3 m
+# Same mapping as the sensor: the camera also triggers at ~1.5 m
 CAM_FAR_MM = SENSOR_FAR_MM
 CAM_NEAR_MM = SENSOR_NEAR_MM
 
@@ -89,7 +89,7 @@ class ParcoursDetection(SensorFirstDetection):
 
     1. Tilted camera (~30°): It sees the floor from ~1 m to ~7 m, so exactly the region
        below the sensor. Distances are estimated from the bottom edge of the boxes
-       and use the same mapping as the sensor (triggers at ~1.3 m).
+       and use the same mapping as the sensor (triggers at ~1.5 m).
 
     2. Obstacle memory: If the nearest obstacle in the middle was in the bottom rows,
        the person was approaching and it suddenly disappears, it is kept as a virtual

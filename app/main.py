@@ -90,7 +90,7 @@ def main():
         sys.exit("YOLO and Sensor not available.")
 
     # Limit the frame rate to save power (None = no limit)
-    MAX_FPS = 5
+    MAX_FPS = 7
 
     # Measure FPS rate
     frames = 0
