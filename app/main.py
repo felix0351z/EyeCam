@@ -11,7 +11,7 @@ def main():
     from picamera2 import Picamera2
 
     picam2 = Picamera2()
-    picam2.preview_configuration.main.size = (640, 640)
+    picam2.preview_configuration.main.size = (320, 320)
     picam2.preview_configuration.main.format = "RGB888"
     picam2.preview_configuration.align()
     picam2.configure("preview")
@@ -23,7 +23,8 @@ def main():
     # ---------------------------------
     from yolo.model import pre_process, YoloV26
     from tracker.tracker import Tracker
-    MODEL_PATH = "/home/eyecam/yolo26n_ncnn_model"
+    MODEL_PATH = "/home/eyecam/yolo26n_ncnn_model_320"
+    MODEL_SIZE = 320
     tracker = Tracker()
 
     try:
@@ -77,7 +78,7 @@ def main():
         sys.exit("YOLO and Sensor not available.")
 
     # Limit the frame rate to save power (None = no limit)
-    MAX_FPS = 7
+    MAX_FPS = 5
 
     # Measure FPS rate
     frames = 0
@@ -97,11 +98,11 @@ def main():
             yolo_output = None
             track_ids = None
             if yolo_model is not None:
-                yolo_input = pre_process(frame)
+                yolo_input = pre_process(frame, MODEL_SIZE)
                 net = yolo_model.infer(yolo_input)
                 yolo_output = yolo_model.post_process(frame, net, yolo_input.transform)
 
-                track_ids = tracker.update(yolo_output, frame.shape)
+                # track_ids = tracker.update(yolo_output, frame.shape)
                 sender.send_yolo_packet(yolo_output)
 
 
