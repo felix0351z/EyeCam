@@ -53,7 +53,8 @@ class BuzzController:
         try:
             self._loop.run_until_complete(self._connect_all())
         except Exception as e:
-            logging.error("BLE setup failed: %s", e)
+            #logging.error("BLE setup failed: %s", e)
+            logging.exception("BLE setup failed")
         finally:
             self._ready.set()
         self._loop.run_forever()
