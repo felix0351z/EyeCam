@@ -44,7 +44,7 @@ class BuzzController:
         logging.info("clients: %s", self._clients)
         for side in DIRECTION_TO_SIDES.get(direction, []):
             client = self._clients.get(side)
-            if client is not None and not client.is_connected:
+            if client is not None and client.is_connected:
                 asyncio.run_coroutine_threadsafe(self._pulse(side), self._loop)
 
 
@@ -150,12 +150,12 @@ class BuzzController:
                 logging.info("write 1 OK")
                 await asyncio.sleep(MOTOR_ON_MS / 1000)
             except Exception:
-                logging.exception("BLE write to %s failed: %s", side)
+                logging.exception("BLE write to %s failed: ", side)
             finally:
                 try:
                     await client.write_gatt_char(CHAR_UUID, bytes([0]), response=False)
                 except Exception:
-                    logging.exception("BLE write to %s failed: %s", side)
+                    logging.exception("BLE write to %s failed: ", side)
 
     async def _shutdown(self):
         for side, client in self._clients.items():
