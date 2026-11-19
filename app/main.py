@@ -52,6 +52,8 @@ def main():
     # ---------------------------------
     from detection.classes import MoveDirection
     from detection.zone_based import ZoneDetection
+    from detection.sensor_first import SensorFirstDetection
+    from detection.parcours import ParcoursDetection
     from sender import Sender
     from detection.buzz_motors import BuzzController
 
@@ -63,7 +65,17 @@ def main():
     def on_detection(direction: MoveDirection):
         print(f"Move to {direction}!")
 
-    detection_algorithm = ZoneDetection()
+    # Choose the algorithm with the first argument, e.g. "python main.py zone"
+    algorithms = {
+        "zone": ZoneDetection,
+        "sensor_first": SensorFirstDetection,
+        "parcours": ParcoursDetection,
+    }
+    algorithm_name = sys.argv[1] if len(sys.argv) > 1 else "parcours"
+    if algorithm_name not in algorithms:
+        sys.exit(f"Unknown algorithm '{algorithm_name}', choose one of: {', '.join(algorithms)}")
+    logging.info("Detection algorithm: %s", algorithm_name)
+    detection_algorithm = algorithms[algorithm_name]()
     detection_algorithm.add_subscriber(on_detection)
     detection_algorithm.add_subscriber(buzz.notify)
     detection_algorithm.add_subscriber(sender.send_move_packet)
@@ -114,7 +126,7 @@ def main():
                     sender.send_sensor_packet(sensor_frame)
 
             # 3. Detection algorithm
-            danger_values = detection_algorithm.calculate(yolo_output, sensor_frame)
+            danger_values = detection_algorithm.calculate(yolo_output, sensor_frame, track_ids)
             sender.send_graph_packet(danger_values)
 
             # 4. Limit the frame rate
