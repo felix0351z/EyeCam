@@ -3,6 +3,7 @@ import math
 import numpy as np
 
 from detection.classes import DangerValues, DetectionAlgorithm, MoveDirection
+from detection.obstacles import OBSTACLE_CLASSES
 from sensor.classes import SensorOutput
 from yolo.classes import YOLOOutput
 
@@ -40,43 +41,7 @@ CAM_FOV_DEG = 41.0
 # low obstacles (chairs, tables) below the sensor's field of view.
 CAM_TILT_DEG = 30.0
 
-# Only these COCO classes are obstacles
-CAM_CLASSES = {
-    0,   # person
-    1,   # bicycle
-    2,   # car
-    3,   # motorcycle
-    5,   # bus
-    7,   # truck
-    10,  # fire hydrant
-    11,  # stop sign
-    12,  # parking meter
-    13,  # bench
-    15,  # cat
-    16,  # dog
-    25,  # umbrella
-    28,  # suitcase
-    41,  # cup
-    56,  # chair
-    57,  # couch
-    58,  # potted plant
-    60,  # dining table
-    61,  # toilet
-}
-
-PARCOURS_CLASSES = {
-    0,   # person
-    1,   # bicycle
-    13,  # bench
-    24,  # backpack
-    28,  # suitcase
-    41,  # cup
-    56,  # chair
-    57,  # couch
-    58,  # potted plant
-    59,  # bed
-    60,  # dining table
-}
+# The obstacle classes for the camera are defined centrally in detection/obstacles.py
 
 
 # No confidence filter here: model.py already filters (> 0.2) and ByteTrack only starts
@@ -335,7 +300,7 @@ def _floor_point(u: np.ndarray, v: np.ndarray, image_shape, tilt_deg: float) -> 
         return scale * forward, np.where(np.isfinite(scale), scale * x, 0.0)
 
 
-def camera_distances(yolo_output: YOLOOutput, stable: np.ndarray, classes=None) -> np.ndarray:
+def camera_distances(yolo_output: YOLOOutput, stable: np.ndarray) -> np.ndarray:
     """
     Distance of the nearest obstacle in mm for [left, middle, right].
     The distance of a box is estimated from its bottom edge on the floor.
@@ -351,8 +316,8 @@ def camera_distances(yolo_output: YOLOOutput, stable: np.ndarray, classes=None) 
     f = (width / 2) / math.tan(math.radians(CAM_FOV_DEG / 2))
     side_px = f * math.tan(math.radians(SIDE_ANGLE_DEG))
 
-    classes = PARCOURS_CLASSES if classes is None else classes
-    relevant = np.isin(yolo_output.class_ids, list(classes)) & stable
+    # Only obstacle classes (detection/obstacles.py) of stable tracks
+    relevant = np.isin(yolo_output.class_ids, list(OBSTACLE_CLASSES)) & stable
 
     for (x1, y1, x2, y2) in boxes[relevant]:
         bottom = min(y2, height - 1)

@@ -14,21 +14,6 @@ from yolo.classes import YOLOOutput
 # Camera
 # ---------------------------------
 
-# Obstacles of the parcours, only COCO classes
-PARCOURS_CLASSES = {
-    0,   # person
-    1,   # bicycle
-    13,  # bench
-    24,  # backpack
-    28,  # suitcase
-    41,  # cup
-    56,  # chair
-    57,  # couch
-    58,  # potted plant
-    59,  # bed
-    60,  # dining table
-}
-
 # Same mapping as the sensor: the camera also triggers at ~1.5 m
 CAM_FAR_MM = SENSOR_FAR_MM
 CAM_NEAR_MM = SENSOR_NEAR_MM
@@ -113,7 +98,7 @@ class ParcoursDetection(SensorFirstDetection):
         # 1. Camera
         if yolo_output is not None:
             stable = self._stable_tracks(track_ids, len(yolo_output.boxes))
-            distances = camera_distances(yolo_output, stable, PARCOURS_CLASSES)
+            distances = camera_distances(yolo_output, stable)
             danger_yolo = _danger(distances, CAM_FAR_MM, CAM_NEAR_MM)
         else:
             danger_yolo = np.zeros(3)
