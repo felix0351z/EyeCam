@@ -40,10 +40,13 @@ class BuzzController:
 
     def notify(self, direction: MoveDirection):
         """Detection subscriber"""
+
         logging.info("direction: %s", direction)
         logging.info("clients: %s", self._clients)
+
         for side in DIRECTION_TO_SIDES.get(direction, []):
             client = self._clients.get(side)
+            if client is not None and client.is_connected:
             if client is not None and client.is_connected:
                 asyncio.run_coroutine_threadsafe(self._pulse(side), self._loop)
 
@@ -139,6 +142,7 @@ class BuzzController:
             return None
 
     async def _pulse(self, side: str):
+
         logging.info("Pulsing %s", side)
 
         client = self._clients.get(side)
@@ -148,20 +152,22 @@ class BuzzController:
             try:
                 await client.write_gatt_char(CHAR_UUID, bytes([1]), response=False)
                 logging.info("write 1 OK")
+                logging.info("write 1 OK")
                 await asyncio.sleep(MOTOR_ON_MS / 1000)
             except Exception:
+                logging.exception("BLE write to %s failed: ", side)
                 logging.exception("BLE write to %s failed: ", side)
             finally:
                 try:
                     await client.write_gatt_char(CHAR_UUID, bytes([0]), response=False)
                 except Exception:
                     logging.exception("BLE write to %s failed: ", side)
+                    logging.exception("BLE write to %s failed: ", side)
 
     async def _shutdown(self):
-        for side, client in self._clients.items():
-            for task in self._tasks:
+        for task in self._tasks:
                 task.cancel()
-            await asyncio.gather(*self._tasks, return_exceptions=True)
+        await asyncio.gather(*self._tasks, return_exceptions=True)
 
 # Old keyboard test for testing reasons:
 if __name__ == "__main__":
