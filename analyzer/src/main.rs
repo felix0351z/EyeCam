@@ -11,7 +11,6 @@ use crate::view::ViewPlugin;
 mod view;
 mod backend;
 mod receiver;
-mod logger;
 
 fn main() {
     App::new()

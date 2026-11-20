@@ -1,5 +1,4 @@
 use crate::backend::protocol::{GraphMessage, GraphSource, GraphValue, MoveDirection, SensorMessage, StatusMessage, YoloMessage, Zone};
-use crate::logger::PacketLogger;
 use crossbeam_channel::Sender;
 use prost::Message;
 use std::io::{BufReader, Read, Write};
@@ -23,9 +22,6 @@ const WRITE_TIMEOUT: Duration = Duration::from_millis(100);
 /// in `control` hinterlegt, über welches die UI Befehle senden kann.
 pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>, control: EyeCamControl) {
     std::thread::spawn(move || {
-        let mut logger = PacketLogger::new()
-            .inspect_err(|e| eprintln!("Packet-Logger deaktiviert: {e}"))
-            .ok();
 
         loop {
             let Ok(stream) = TcpStream::connect(EYECAM_ADDRESS) else {
@@ -42,12 +38,6 @@ pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>, control: EyeCamContr
 
             let mut buf_reader = BufReader::new(&stream);
             while let Ok(frame) = read_frame(&mut buf_reader) {
-                if let Some(l) = logger.as_mut() {
-                    if let Err(e) = l.log(&frame) {
-                        eprintln!("Logging fehlgeschlagen, Logger deaktiviert: {e}");
-                        logger = None;
-                    }
-                }
 
                 // Kaputte Pakete überspringen, das Framing bleibt dabei intakt.
                 let Ok(packet) = api::Packet::decode(&frame[..]) else { continue };
@@ -60,9 +50,6 @@ pub fn spawn_eyecam_receiver(tx: Sender<protocol::Message>, control: EyeCamContr
                 }
             }
 
-            if let Some(l) = logger.as_mut() {
-                let _ = l.flush();
-            }
             control.set_stream(None);
             eprintln!("Connection closed. Reconnecting...");
         }
